@@ -35,8 +35,8 @@
 		"infra:ps": "docker compose ps"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.0.0",
+		"@biomejs/biome": "^2.4.10",
 		"turbo": "^2.9.3",
-		"typescript": "^5.8.0"
+		"typescript": "^6.0.2"
 	}
 }

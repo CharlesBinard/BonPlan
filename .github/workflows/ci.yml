@@ -23,7 +23,7 @@ jobs:
       - run: |
           for pkg in shared ai gateway orchestrator scraper analyzer notifier; do
             echo "::group::Typecheck $pkg"
-            bunx tsc --noEmit -p packages/$pkg/tsconfig.json
+            bunx tsc --noEmit --project packages/$pkg/tsconfig.json
             echo "::endgroup::"
           done
 
