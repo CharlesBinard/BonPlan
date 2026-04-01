@@ -1,0 +1,248 @@
+services:
+  # ── Infrastructure ──
+  postgres:
+    image: postgres:17-alpine
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: bonplan
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: bonplan
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bonplan"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1"
+
+  redis:
+    image: redis:alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD:?}
+    volumes:
+      - redis-data:/data
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      VPN_SERVICE_PROVIDER: protonvpn
+      VPN_TYPE: wireguard
+      WIREGUARD_PRIVATE_KEY: ${PROTON_WG_PRIVATE_KEY:?}
+      SERVER_COUNTRIES: France
+      FIREWALL: "on"
+      FIREWALL_INPUT_PORTS: "9222"
+      FIREWALL_OUTBOUND_SUBNETS: "172.16.0.0/12,192.168.0.0/16"
+      DOT: "on"
+    volumes:
+      - gluetun-data:/gluetun
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- https://api.ipify.org 2>/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+
+  chrome-stealth:
+    build: ./docker/chrome-stealth
+    network_mode: "service:gluetun"
+    shm_size: 2g
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    volumes:
+      - browser-profile:/data/browser-profile
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9222/json/version || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+          cpus: "2"
+
+  searxng:
+    image: searxng/searxng:latest
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET_KEY:-changeme}
+    volumes:
+      - ./config/searxng/settings.yml:/etc/searxng/settings.yml
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+
+  # ── Cloudflare Tunnel ──
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?}
+    depends_on:
+      - gateway
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.25"
+
+  # ── Application services ──
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/gateway.Dockerfile
+    environment:
+      DATABASE_URL: postgresql://bonplan:${POSTGRES_PASSWORD:?}@postgres:5432/bonplan
+      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?}
+      GATEWAY_URL: http://gateway:3000
+      ADMIN_USER_ID: ${ADMIN_USER_ID:-}
+      DISCORD_SERVICE_TOKEN: ${DISCORD_SERVICE_TOKEN:-}
+      TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-}
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1"
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: docker/orchestrator.Dockerfile
+    environment:
+      DATABASE_URL: postgresql://bonplan:${POSTGRES_PASSWORD:?}@postgres:5432/bonplan
+      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?}
+      SEARXNG_URL: http://searxng:8080
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1"
+
+  scraper:
+    build:
+      context: .
+      dockerfile: docker/scraper.Dockerfile
+    environment:
+      DATABASE_URL: postgresql://bonplan:${POSTGRES_PASSWORD:?}@postgres:5432/bonplan
+      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+      BROWSER_WS_URL: ws://gluetun:9222
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chrome-stealth:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1"
+
+  analyzer:
+    build:
+      context: .
+      dockerfile: docker/analyzer.Dockerfile
+    environment:
+      DATABASE_URL: postgresql://bonplan:${POSTGRES_PASSWORD:?}@postgres:5432/bonplan
+      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?}
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1"
+
+  notifier:
+    build:
+      context: .
+      dockerfile: docker/notifier.Dockerfile
+    environment:
+      DATABASE_URL: postgresql://bonplan:${POSTGRES_PASSWORD:?}@postgres:5432/bonplan
+      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_SERVICE_TOKEN: ${DISCORD_SERVICE_TOKEN:-}
+      GATEWAY_URL: http://gateway:3000
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+
+volumes:
+  postgres-data:
+  redis-data:
+  browser-profile:
+  gluetun-data:

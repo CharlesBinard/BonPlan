@@ -1,0 +1,24 @@
+{
+	"name": "@bonplan/scraper",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "node --env-file=../../.env --import tsx --watch src/index.ts",
+		"start": "node --env-file=../../.env --import tsx src/index.ts",
+		"test": "bun test src/**/*.test.ts",
+		"typecheck": "bun run tsc --noEmit"
+	},
+	"dependencies": {
+		"@bonplan/shared": "workspace:*",
+		"drizzle-orm": "^0.44.0",
+		"ioredis": "^5.6.0",
+		"patchright": "^1.59.0",
+		"patchright-core": "^1.59.0"
+	},
+	"devDependencies": {
+		"tsx": "^4.19.0",
+		"typescript": "^5.8.0",
+		"@types/bun": "latest"
+	}
+}

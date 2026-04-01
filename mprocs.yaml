@@ -1,0 +1,19 @@
+procs:
+  gateway:
+    cmd: ["bun", "run", "--env-file=../../.env", "--watch", "src/index.ts"]
+    cwd: packages/gateway
+  orchestrator:
+    cmd: ["bun", "run", "--env-file=../../.env", "--watch", "src/index.ts"]
+    cwd: packages/orchestrator
+  scraper:
+    cmd: ["node", "--env-file=../../.env", "--import", "tsx", "--watch", "src/index.ts"]
+    cwd: packages/scraper
+  analyzer:
+    cmd: ["bun", "run", "--env-file=../../.env", "--watch", "src/index.ts"]
+    cwd: packages/analyzer
+  notifier:
+    cmd: ["bun", "run", "--env-file=../../.env", "--watch", "src/index.ts"]
+    cwd: packages/notifier
+  frontend:
+    cmd: ["bunx", "vite"]
+    cwd: packages/frontend

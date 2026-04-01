@@ -1,0 +1,16 @@
+use_default_settings: true
+
+server:
+  secret_key: "CHANGE_ME_generate_with_openssl_rand_hex_32"
+  limiter: false
+  image_proxy: false
+  method: "GET"
+
+search:
+  safe_search: 0
+  formats:
+    - html
+    - json
+
+ui:
+  static_use_hash: true

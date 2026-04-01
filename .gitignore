@@ -1,0 +1,30 @@
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build
+.turbo
+
+# Scraper snapshots (contain scraped HTML)
+parser-snapshots/
+
+# SearXNG config (contains secrets)
+config/searxng/settings.yml
+mprocs.log

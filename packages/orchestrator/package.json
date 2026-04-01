@@ -1,0 +1,23 @@
+{
+	"name": "@bonplan/orchestrator",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "bun run --env-file=../../.env --watch src/index.ts",
+		"start": "bun run --env-file=../../.env src/index.ts",
+		"test": "bun test src/**/*.test.ts",
+		"typecheck": "bun run tsc --noEmit"
+	},
+	"dependencies": {
+		"@bonplan/ai": "workspace:*",
+		"@bonplan/shared": "workspace:*",
+		"drizzle-orm": "^0.44.0",
+		"ioredis": "^5.6.0",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"typescript": "^5.8.0",
+		"@types/bun": "latest"
+	}
+}

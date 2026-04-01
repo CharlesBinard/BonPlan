@@ -1,0 +1,42 @@
+{
+	"name": "bonplan",
+	"private": true,
+	"packageManager": "bun@1.3.9",
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"dev": "mprocs",
+		"dev:all": "bun run --filter '*' dev",
+		"dev:gateway": "bun run --filter @bonplan/gateway dev",
+		"dev:orchestrator": "bun run --filter @bonplan/orchestrator dev",
+		"dev:scraper": "bun run --filter @bonplan/scraper dev",
+		"dev:analyzer": "bun run --filter @bonplan/analyzer dev",
+		"dev:notifier": "bun run --filter @bonplan/notifier dev",
+		"dev:frontend": "bun run --filter frontend dev",
+		"dev:backend": "bun run --filter '@bonplan/*' dev",
+		"start:gateway": "bun run --filter @bonplan/gateway start",
+		"start:orchestrator": "bun run --filter @bonplan/orchestrator start",
+		"start:scraper": "bun run --filter @bonplan/scraper start",
+		"start:analyzer": "bun run --filter @bonplan/analyzer start",
+		"start:notifier": "bun run --filter @bonplan/notifier start",
+		"build": "bun run --filter frontend build",
+		"test": "turbo test",
+		"test:shared": "bun run --filter @bonplan/shared test",
+		"typecheck": "turbo typecheck",
+		"lint": "turbo lint",
+		"check": "biome check .",
+		"check:fix": "biome check --write .",
+		"db:generate": "cd packages/shared && bunx drizzle-kit generate",
+		"db:migrate": "cd packages/shared && bunx drizzle-kit migrate",
+		"db:studio": "cd packages/shared && bunx drizzle-kit studio",
+		"infra:up": "docker compose up -d",
+		"infra:down": "docker compose down",
+		"infra:ps": "docker compose ps"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.0.0",
+		"turbo": "^2.9.3",
+		"typescript": "^5.8.0"
+	}
+}
