@@ -11,14 +11,14 @@
 	},
 	"dependencies": {
 		"@bonplan/shared": "workspace:*",
-		"drizzle-orm": "^0.44.0",
+		"drizzle-orm": "^0.45.2",
 		"ioredis": "^5.6.0",
 		"patchright": "^1.59.0",
 		"patchright-core": "^1.59.0"
 	},
 	"devDependencies": {
 		"tsx": "^4.19.0",
-		"typescript": "^5.8.0",
+		"typescript": "^6.0.2",
 		"@types/bun": "latest"
 	}
 }
