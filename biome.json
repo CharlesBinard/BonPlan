@@ -6,7 +6,7 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["**", "!**/parser-snapshots"]
+		"includes": ["**", "!**/parser-snapshots", "!.claude"]
 	},
 	"formatter": {
 		"enabled": true,
@@ -36,10 +36,6 @@
 		"parser": { "tailwindDirectives": true }
 	},
 	"overrides": [
-		{
-			"includes": ["**/frontend/eslint.config.js"],
-			"linter": { "rules": { "style": { "noDefaultExport": "off" } } }
-		},
 		{
 			"includes": ["**/drizzle.config.ts"],
 			"linter": {
