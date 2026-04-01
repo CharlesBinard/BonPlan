@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          cache: true
+      - run: bun install --frozen-lockfile
+      - run: |
+          for pkg in shared ai gateway orchestrator scraper analyzer notifier; do
+            echo "::group::Typecheck $pkg"
+            bunx tsc --noEmit -p packages/$pkg/tsconfig.json
+            echo "::endgroup::"
+          done
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          cache: true
+      - run: bun install --frozen-lockfile
+      - run: bunx biome check .
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: bonplan
+          POSTGRES_PASSWORD: bonplan_test
+          POSTGRES_DB: bonplan
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bonplan"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://bonplan:bonplan_test@localhost:5432/bonplan
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          cache: true
+      - run: bun install --frozen-lockfile
+      - run: bun test
+
+  build-frontend:
+    name: build-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          cache: true
+      - run: bun install --frozen-lockfile
+      - run: cd packages/frontend && bun run build
