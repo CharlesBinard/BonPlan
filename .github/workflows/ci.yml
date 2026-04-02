@@ -21,7 +21,7 @@ jobs:
           cache: true
       - run: bun install --frozen-lockfile
       - run: |
-          for pkg in shared ai gateway orchestrator scraper analyzer notifier; do
+          for pkg in shared ai gateway orchestrator scraper analyzer notifier frontend; do
             echo "::group::Typecheck $pkg"
             bunx tsc --noEmit --project packages/$pkg/tsconfig.json
             echo "::endgroup::"
