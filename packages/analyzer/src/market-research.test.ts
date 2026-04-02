@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+	buildMarketContextString,
 	buildMarketQueries,
 	buildSiteQuery,
 	CACHE_TTL_SECONDS,
@@ -9,6 +10,7 @@ import {
 	extractPrice,
 	fetchInternalHistory,
 	parseSearxngComparables,
+	type Comparable,
 } from "./market-research";
 
 // ── Existing tests (preserved) ──────────────────────────────────
@@ -238,5 +240,43 @@ describe("fetchInternalHistory", () => {
 	it("returns empty array for whitespace-only query", async () => {
 		const result = await fetchInternalHistory(null as never, "   ");
 		expect(result).toEqual([]);
+	});
+});
+
+// ── buildMarketContextString ───────────────────────────────────
+
+describe("buildMarketContextString", () => {
+	it("formats comparables grouped by source with median", () => {
+		const comparables: Comparable[] = [
+			{ title: "RTX 4090 OC", price: 69900, source: "backmarket.fr" },
+			{ title: "RTX 4090 FE", price: 64000, source: "rakuten.com" },
+			{ title: "RTX 4090 occasion", price: 58000, source: "bonplan-history", date: "2026-03-15T10:00:00Z" },
+		];
+		const result = buildMarketContextString("RTX 4090", comparables, 64000);
+
+		expect(result).toContain('Comparables trouvés pour "RTX 4090"');
+		expect(result).toContain("backmarket.fr");
+		expect(result).toContain("rakuten.com");
+		expect(result).toContain("bonplan-history");
+		expect(result).toContain("699€");
+		expect(result).toContain("640€");
+		expect(result).toContain("580€");
+		expect(result).toContain("Prix médian occasion estimé : 640€");
+	});
+
+	it("omits median line when median is null", () => {
+		const result = buildMarketContextString("test", [{ title: "A", price: 10000, source: "searxng" }], null);
+		expect(result).not.toContain("Prix médian");
+	});
+
+	it("limits to 3 items per source", () => {
+		const comparables: Comparable[] = Array.from({ length: 5 }, (_, i) => ({
+			title: `Item ${i}`,
+			price: (i + 1) * 10000,
+			source: "backmarket.fr",
+		}));
+		const result = buildMarketContextString("test", comparables, null);
+		const lines = result.split("\n").filter((l) => l.startsWith("- backmarket.fr"));
+		expect(lines).toHaveLength(3);
 	});
 });

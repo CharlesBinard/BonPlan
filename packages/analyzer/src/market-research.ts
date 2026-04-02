@@ -175,59 +175,121 @@ export const fetchInternalHistory = async (db: Db, query: string): Promise<Compa
 	}
 };
 
+// ── Context String Builder ──────────────────────────────────────
+
+/** Build a formatted market context string for the AI prompt. */
+export const buildMarketContextString = (
+	searchQuery: string,
+	comparables: Comparable[],
+	median: number | null,
+): string => {
+	const lines: string[] = [`Comparables trouvés pour "${searchQuery}" :`];
+
+	const bySource: Record<string, Comparable[]> = {};
+	for (const c of comparables) {
+		(bySource[c.source] ??= []).push(c);
+	}
+
+	for (const [source, items] of Object.entries(bySource)) {
+		for (const item of items.slice(0, 3)) {
+			const priceEur = Math.round(item.price / 100);
+			lines.push(`- ${source}: "${item.title}" → ${priceEur}€`);
+		}
+	}
+
+	if (median !== null) {
+		lines.push("", `Prix médian occasion estimé : ${Math.round(median / 100)}€`);
+	}
+
+	lines.push(
+		"",
+		"Note: Les prix affichés sont des prix demandés. Les prix de transaction réels sont généralement 10-20% inférieurs sur LeBonCoin.",
+	);
+
+	return lines.join("\n");
+};
+
 export const fetchMarketContext = async (
 	redis: Redis,
+	db: Db,
 	searchQuery: string,
 	searxngUrl: string | undefined,
-): Promise<string | null> => {
-	if (!searxngUrl) return null;
-
+): Promise<MarketResearchResult | null> => {
 	const cacheKey = `${CACHE_PREFIX}${searchQuery.toLowerCase().trim().replace(/\s+/g, " ")}`;
 
-	// Check cache
+	// Check cache (stores JSON since v2 — validate structure)
 	const cached = await redis.get(cacheKey);
 	if (cached) {
-		logger.info("Market research cache hit", { query: searchQuery });
-		return cached;
+		try {
+			const parsed = JSON.parse(cached);
+			if (parsed && typeof parsed === "object" && "context" in parsed && "comparables" in parsed) {
+				logger.info("Market research cache hit", { query: searchQuery });
+				return parsed as MarketResearchResult;
+			}
+			// Old format (plain string) or invalid — refetch
+		} catch {
+			// Corrupted cache — refetch
+		}
 	}
 
 	try {
-		const queries = buildMarketQueries(searchQuery);
+		// Fetch all 3 source groups in parallel for minimal latency
+		const [siteResults, genericResults, internalComparables] = await Promise.all([
+			// 1. Site-scoped SearXNG (BackMarket, Rakuten)
+			searxngUrl
+				? Promise.all(
+						["backmarket.fr", "rakuten.com"].map(async (site) => {
+							try {
+								const results = await fetchSearxng(searxngUrl, buildSiteQuery(searchQuery, site));
+								return parseSearxngComparables(results, site);
+							} catch {
+								return [];
+							}
+						}),
+					)
+				: Promise.resolve([] as Comparable[][]),
 
-		// Fetch all query variants in parallel
-		const allResults = await Promise.all(queries.map((q) => fetchSearxng(searxngUrl, q)));
+			// 2. Generic SearXNG queries
+			searxngUrl
+				? Promise.all(buildMarketQueries(searchQuery).map((q) => fetchSearxng(searxngUrl, q)))
+				: Promise.resolve([] as Array<Array<{ title: string; content: string }>>),
 
-		// Deduplicate by title and take top 8 results
-		const seen = new Set<string>();
-		const uniqueResults: Array<{ title: string; content: string; query: string }> = [];
+			// 3. Internal price history (sold listings)
+			fetchInternalHistory(db, searchQuery),
+		]);
 
-		for (let i = 0; i < allResults.length; i++) {
-			const results = allResults[i] as Array<{ title: string; content: string }>;
-			for (const result of results) {
-				const key = result.title.toLowerCase().trim();
+		const allComparables: Comparable[] = [];
+
+		// Add site-scoped results
+		allComparables.push(...siteResults.flat());
+
+		// Add generic results with deduplication
+		const seen = new Set<string>(allComparables.map((c) => c.title.toLowerCase().trim()));
+		for (const results of genericResults) {
+			for (const c of parseSearxngComparables(results, "searxng")) {
+				const key = c.title.toLowerCase().trim();
 				if (!seen.has(key)) {
 					seen.add(key);
-					uniqueResults.push({ ...result, query: queries[i] as string });
+					allComparables.push(c);
 				}
 			}
 		}
 
-		if (uniqueResults.length === 0) return null;
+		// Add internal history
+		allComparables.push(...internalComparables);
 
-		const top = uniqueResults.slice(0, 8);
-		const context = [
-			`Market research for "${searchQuery}" (${top.length} results from ${queries.length} queries):`,
-			"",
-			"Use these to estimate the fair market price. Remember: listed/asking prices are typically 10-20% above actual selling prices on LeBonCoin.",
-			"",
-			...top.map((r) => `- ${r.title}: ${r.content}`),
-		].join("\n");
+		if (allComparables.length === 0) return null;
 
-		// Cache for 1 hour
-		await redis.set(cacheKey, context, "EX", CACHE_TTL_SECONDS);
-		logger.info("Market research fetched and cached", { query: searchQuery, resultCount: top.length });
+		const median = computeMedian(allComparables.map((c) => c.price));
+		const context = buildMarketContextString(searchQuery, allComparables, median);
 
-		return context;
+		const result: MarketResearchResult = { context, comparables: allComparables, median };
+
+		// Cache for 24 hours
+		await redis.set(cacheKey, JSON.stringify(result), "EX", CACHE_TTL_SECONDS);
+		logger.info("Market research fetched and cached", { query: searchQuery, resultCount: allComparables.length });
+
+		return result;
 	} catch (err) {
 		const error = err instanceof Error ? err : new Error(String(err));
 		logger.warn("Market research failed", { query: searchQuery, error: error.message });
