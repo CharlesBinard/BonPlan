@@ -219,18 +219,22 @@ export const fetchMarketContext = async (
 	const cacheKey = `${CACHE_PREFIX}${searchQuery.toLowerCase().trim().replace(/\s+/g, " ")}`;
 
 	// Check cache (stores JSON since v2 — validate structure)
-	const cached = await redis.get(cacheKey);
-	if (cached) {
-		try {
-			const parsed = JSON.parse(cached);
-			if (parsed && typeof parsed === "object" && "context" in parsed && "comparables" in parsed) {
-				logger.info("Market research cache hit", { query: searchQuery });
-				return parsed as MarketResearchResult;
+	try {
+		const cached = await redis.get(cacheKey);
+		if (cached) {
+			try {
+				const parsed = JSON.parse(cached);
+				if (parsed && typeof parsed === "object" && "context" in parsed && "comparables" in parsed) {
+					logger.info("Market research cache hit", { query: searchQuery });
+					return parsed as MarketResearchResult;
+				}
+				// Old format (plain string) or invalid — refetch
+			} catch {
+				// Corrupted cache — refetch
 			}
-			// Old format (plain string) or invalid — refetch
-		} catch {
-			// Corrupted cache — refetch
 		}
+	} catch {
+		// Redis unavailable — continue without cache
 	}
 
 	try {
@@ -252,7 +256,15 @@ export const fetchMarketContext = async (
 
 			// 2. Generic SearXNG queries
 			searxngUrl
-				? Promise.all(buildMarketQueries(searchQuery).map((q) => fetchSearxng(searxngUrl, q)))
+				? Promise.all(
+						buildMarketQueries(searchQuery).map(async (q) => {
+							try {
+								return await fetchSearxng(searxngUrl, q);
+							} catch {
+								return [];
+							}
+						}),
+					)
 				: Promise.resolve([] as Array<Array<{ title: string; content: string }>>),
 
 			// 3. Internal price history (sold listings)
