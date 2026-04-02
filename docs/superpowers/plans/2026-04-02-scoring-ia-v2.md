@@ -4,11 +4,13 @@
 
 **Goal:** Enrich AI scoring with structured market context from site-scoped SearXNG queries (BackMarket, Rakuten) and internal price history, producing comparables, market median, and discount percentage per analysis.
 
-**Architecture:** Extend `fetchMarketContext()` to aggregate 4 data sources (2 site-scoped SearXNG, generic SearXNG, internal DB history) into a structured `MarketResearchResult`. The AI receives a richer prompt and returns curated comparables. `discount` and `marketMedian` are computed server-side in `analyze.ts`, not by the AI. Three new nullable columns on `analyses` allow backward-compatible rollout.
+**Architecture:** Extend `fetchMarketContext()` to aggregate 4 data sources (2 site-scoped SearXNG, generic SearXNG, internal DB history) into a structured `MarketResearchResult`. The AI receives a richer prompt and returns curated comparables. `discount` and `marketMedian` are computed server-side via pure functions, not by the AI. Three new nullable columns on `analyses` allow backward-compatible rollout.
 
 **Tech Stack:** Bun, TypeScript, Drizzle ORM, Zod, ioredis, SearXNG, PostgreSQL
 
 **Spec:** `docs/superpowers/specs/2026-04-02-smart-deals-v2-design.md` — Section 1
+
+**Task order rationale:** T1→T2→T3 build foundations. T4→T5 are independent schema/prompt changes. T6 merges the `fetchMarketContext` restructure + `analyze.ts` integration in a single task to avoid breaking the typecheck. T7→T8 finalize.
 
 ---
 
@@ -66,15 +68,15 @@ git commit -m "feat(shared): add comparables, marketMedian, discount columns to 
 
 ---
 
-### Task 2: Market Research Types & Utility Functions
+### Task 2: Market Research Types, Utilities & Price Extraction
 
 **Files:**
 - Modify: `packages/analyzer/src/market-research.ts`
 - Modify: `packages/analyzer/src/market-research.test.ts`
 
-- [ ] **Step 1: Write failing tests for types and utilities**
+- [ ] **Step 1: Write failing tests for all new utilities**
 
-Add to `packages/analyzer/src/market-research.test.ts`:
+Replace `packages/analyzer/src/market-research.test.ts` entirely:
 
 ```typescript
 import { describe, expect, it } from "bun:test";
@@ -82,10 +84,34 @@ import {
 	buildMarketQueries,
 	buildSiteQuery,
 	CACHE_TTL_SECONDS,
+	computeDiscount,
 	computeMedian,
+	escapeLike,
 	extractPrice,
 	parseSearxngComparables,
 } from "./market-research";
+
+// ── Existing tests (preserved) ──────────────────────────────────
+
+describe("market-research", () => {
+	it("builds multiple market queries from search query", () => {
+		const queries = buildMarketQueries("HDD 10To");
+		expect(queries.length).toBeGreaterThanOrEqual(2);
+		expect(queries[0]).toBe("HDD 10To prix occasion");
+	});
+
+	it("includes occasion and reconditionné variants", () => {
+		const queries = buildMarketQueries("iPhone 15 Pro");
+		expect(queries.some((q) => q.includes("occasion"))).toBe(true);
+		expect(queries.some((q) => q.includes("reconditionné"))).toBe(true);
+	});
+
+	it("exports cache TTL constant of 24h", () => {
+		expect(CACHE_TTL_SECONDS).toBe(86400);
+	});
+});
+
+// ── computeMedian ───────────────────────────────────────────────
 
 describe("computeMedian", () => {
 	it("returns null for empty array", () => {
@@ -109,9 +135,21 @@ describe("computeMedian", () => {
 	});
 
 	it("rounds to integer for even-length arrays", () => {
-		expect(computeMedian([10000, 10001])).toBe(10001); // Math.round(10000.5)
+		expect(computeMedian([10000, 10001])).toBe(10001);
+	});
+
+	it("handles all identical values", () => {
+		expect(computeMedian([500, 500, 500, 500])).toBe(500);
+	});
+
+	it("does not mutate the input array", () => {
+		const input = [300, 100, 200];
+		computeMedian(input);
+		expect(input).toEqual([300, 100, 200]);
 	});
 });
+
+// ── extractPrice ────────────────────────────────────────────────
 
 describe("extractPrice", () => {
 	it("extracts simple euro price", () => {
@@ -126,8 +164,20 @@ describe("extractPrice", () => {
 		expect(extractPrice("Prix: 12.50€")).toBe(1250);
 	});
 
-	it("extracts price with space separator", () => {
+	it("extracts price with space thousands separator", () => {
 		expect(extractPrice("À partir de 1 299€")).toBe(129900);
+	});
+
+	it("extracts European format: dot thousands + comma decimals", () => {
+		expect(extractPrice("MacBook Pro 1.299,00€")).toBe(129900);
+	});
+
+	it("extracts European format: dot thousands without decimals", () => {
+		expect(extractPrice("Prix: 1.299€")).toBe(129900);
+	});
+
+	it("extracts large European format: multiple dot groups", () => {
+		expect(extractPrice("Voiture 12.500€")).toBe(1250000);
 	});
 
 	it("returns null when no price found", () => {
@@ -137,7 +187,57 @@ describe("extractPrice", () => {
 	it("extracts first price from text with multiple prices", () => {
 		expect(extractPrice("De 500€ à 700€")).toBe(50000);
 	});
+
+	it("returns null for price without euro symbol", () => {
+		expect(extractPrice("Price: 699 EUR")).toBeNull();
+	});
+
+	it("returns null for empty string", () => {
+		expect(extractPrice("")).toBeNull();
+	});
+
+	it("handles zero price", () => {
+		expect(extractPrice("Gratuit 0€")).toBe(0);
+	});
 });
+
+// ── computeDiscount ─────────────────────────────────────────────
+
+describe("computeDiscount", () => {
+	it("returns positive discount when listing is below market", () => {
+		expect(computeDiscount(60000, 100000)).toBe(40);
+	});
+
+	it("returns negative discount when listing is above market", () => {
+		expect(computeDiscount(120000, 100000)).toBe(-20);
+	});
+
+	it("returns 0 when listing equals market median", () => {
+		expect(computeDiscount(100000, 100000)).toBe(0);
+	});
+
+	it("returns null when median is null", () => {
+		expect(computeDiscount(50000, null)).toBeNull();
+	});
+
+	it("returns null when median is 0", () => {
+		expect(computeDiscount(50000, 0)).toBeNull();
+	});
+
+	it("returns null when median is negative", () => {
+		expect(computeDiscount(50000, -100)).toBeNull();
+	});
+
+	it("rounds to nearest integer", () => {
+		expect(computeDiscount(33300, 100000)).toBe(67);
+	});
+
+	it("returns 100 for free item", () => {
+		expect(computeDiscount(0, 100000)).toBe(100);
+	});
+});
+
+// ── parseSearxngComparables ─────────────────────────────────────
 
 describe("parseSearxngComparables", () => {
 	it("extracts comparables with prices from results", () => {
@@ -160,14 +260,45 @@ describe("parseSearxngComparables", () => {
 	});
 
 	it("returns empty array when no prices found", () => {
-		const results = [{ title: "Article", content: "No price info" }];
-		expect(parseSearxngComparables(results, "searxng")).toEqual([]);
+		expect(parseSearxngComparables([{ title: "Article", content: "No price info" }], "searxng")).toEqual([]);
+	});
+
+	it("returns empty array for empty input", () => {
+		expect(parseSearxngComparables([], "backmarket.fr")).toEqual([]);
+	});
+
+	it("handles European format prices in content", () => {
+		const results = [{ title: "MacBook Pro M3", content: "À partir de 1.299,00€" }];
+		const comparables = parseSearxngComparables(results, "backmarket.fr");
+		expect(comparables[0]?.price).toBe(129900);
 	});
 });
+
+// ── buildSiteQuery ──────────────────────────────────────────────
 
 describe("buildSiteQuery", () => {
 	it("adds site: operator to query", () => {
 		expect(buildSiteQuery("RTX 4090", "backmarket.fr")).toBe("RTX 4090 site:backmarket.fr");
+	});
+});
+
+// ── escapeLike ──────────────────────────────────────────────────
+
+describe("escapeLike", () => {
+	it("escapes % wildcard", () => {
+		expect(escapeLike("100%")).toBe("100\\%");
+	});
+
+	it("escapes _ wildcard", () => {
+		expect(escapeLike("test_value")).toBe("test\\_value");
+	});
+
+	it("escapes backslash", () => {
+		expect(escapeLike("path\\file")).toBe("path\\\\file");
+	});
+
+	it("leaves normal text unchanged", () => {
+		expect(escapeLike("RTX 4090")).toBe("RTX 4090");
 	});
 });
 ```
@@ -179,11 +310,11 @@ Run:
 cd packages/analyzer && bun test src/market-research.test.ts
 ```
 
-Expected: FAIL — `computeMedian`, `extractPrice`, `parseSearxngComparables`, `buildSiteQuery` are not exported.
+Expected: FAIL — new functions not exported yet.
 
-- [ ] **Step 3: Implement types and utilities**
+- [ ] **Step 3: Implement all types and utilities**
 
-Add to the top of `packages/analyzer/src/market-research.ts`, after the existing imports:
+In `packages/analyzer/src/market-research.ts`, add these after the existing imports and before the existing `CACHE_TTL_SECONDS`:
 
 ```typescript
 // ── Types ────────────────────────────────────────────────────────
@@ -197,7 +328,7 @@ export type Comparable = {
 
 export type MarketResearchResult = {
 	context: string; // Formatted text for AI prompt
-	comparables: Comparable[]; // Structured data for storage
+	comparables: Comparable[]; // Structured data for storage (cents)
 	median: number | null; // Median price in cents
 };
 
@@ -209,16 +340,39 @@ export const computeMedian = (values: number[]): number | null => {
 	const sorted = [...values].sort((a, b) => a - b);
 	const mid = Math.floor(sorted.length / 2);
 	if (sorted.length % 2 !== 0) return sorted[mid]!;
-	return Math.round(((sorted[mid - 1]!) + (sorted[mid]!)) / 2);
+	return Math.round((sorted[mid - 1]! + sorted[mid]!) / 2);
 };
 
-/** Extract the first EUR price from a text string. Returns price in cents or null. */
+/**
+ * Extract the first EUR price from a text string. Returns price in cents or null.
+ * Handles European formats: 699€, 1 299€, 1.299€, 1.299,00€, 12,50€, 12.50€
+ */
 export const extractPrice = (text: string): number | null => {
-	const match = text.match(/(\d[\d\s]*(?:[.,]\d{1,2})?)\s*€/);
+	const match = text.match(/(\d[\d\s.]*(?:,\d{1,2})?)\s*€/);
 	if (!match?.[1]) return null;
-	const cleaned = match[1].replace(/\s/g, "").replace(",", ".");
-	const euros = Number.parseFloat(cleaned);
+
+	let raw = match[1].replace(/\s/g, "");
+
+	if (raw.includes(",")) {
+		// Comma present → dots are thousands separators: "1.299,00" → "1299.00"
+		raw = raw.replace(/\./g, "").replace(",", ".");
+	} else if (/^\d{1,3}(?:\.\d{3})+$/.test(raw)) {
+		// Dot-separated groups of 3 = thousands separator: "1.299" → "1299"
+		raw = raw.replace(/\./g, "");
+	}
+	// Otherwise dot is decimal: "12.50" stays "12.50"
+
+	const euros = Number.parseFloat(raw);
 	return Number.isNaN(euros) ? null : Math.round(euros * 100);
+};
+
+/**
+ * Compute discount percentage. Positive = below market, negative = above market.
+ * Returns null if median is unavailable or zero.
+ */
+export const computeDiscount = (listingPrice: number, marketMedian: number | null): number | null => {
+	if (marketMedian === null || marketMedian <= 0) return null;
+	return Math.round((1 - listingPrice / marketMedian) * 100);
 };
 
 /** Parse SearXNG results into structured Comparables by extracting prices. */
@@ -240,37 +394,12 @@ export const parseSearxngComparables = (
 export const buildSiteQuery = (query: string, site: string): string => {
 	return `${query} site:${site}`;
 };
+
+/** Escape LIKE/ILIKE special characters to prevent wildcard injection. */
+export const escapeLike = (s: string): string => s.replace(/[%_\\]/g, "\\$&");
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run:
-```bash
-cd packages/analyzer && bun test src/market-research.test.ts
-```
-
-Expected: ALL PASS
-
-- [ ] **Step 5: Update CACHE_TTL_SECONDS test**
-
-The spec requires changing cache TTL from 1h to 24h. Update the existing test in `market-research.test.ts`:
-
-```typescript
-it("exports cache TTL constant", () => {
-	expect(CACHE_TTL_SECONDS).toBe(86400);
-});
-```
-
-- [ ] **Step 6: Run test to see it fail**
-
-Run:
-```bash
-cd packages/analyzer && bun test src/market-research.test.ts
-```
-
-Expected: FAIL — `CACHE_TTL_SECONDS` is still 3600.
-
-- [ ] **Step 7: Update cache TTL**
+- [ ] **Step 4: Update cache TTL to 24h**
 
 In `packages/analyzer/src/market-research.ts`, change:
 
@@ -278,7 +407,7 @@ In `packages/analyzer/src/market-research.ts`, change:
 export const CACHE_TTL_SECONDS = 86400; // 24 hours
 ```
 
-- [ ] **Step 8: Run tests to verify all pass**
+- [ ] **Step 5: Run tests to verify they all pass**
 
 Run:
 ```bash
@@ -287,11 +416,11 @@ cd packages/analyzer && bun test src/market-research.test.ts
 
 Expected: ALL PASS
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add packages/analyzer/src/market-research.ts packages/analyzer/src/market-research.test.ts
-git commit -m "feat(analyzer): add market research types, utilities, and 24h cache TTL"
+git commit -m "feat(analyzer): add market research types, utilities, price extraction, and 24h cache"
 ```
 
 ---
@@ -302,7 +431,7 @@ git commit -m "feat(analyzer): add market research types, utilities, and 24h cac
 - Modify: `packages/analyzer/src/market-research.ts`
 - Modify: `packages/analyzer/src/market-research.test.ts`
 
-- [ ] **Step 1: Write failing test for fetchInternalHistory**
+- [ ] **Step 1: Write failing tests for fetchInternalHistory**
 
 Add to `packages/analyzer/src/market-research.test.ts`:
 
@@ -311,7 +440,6 @@ import { fetchInternalHistory } from "./market-research";
 
 describe("fetchInternalHistory", () => {
 	it("returns empty array when query has no meaningful keywords", async () => {
-		// No DB call needed — short-circuits on empty keywords
 		const result = await fetchInternalHistory(null as never, "a b");
 		expect(result).toEqual([]);
 	});
@@ -320,10 +448,15 @@ describe("fetchInternalHistory", () => {
 		const result = await fetchInternalHistory(null as never, "");
 		expect(result).toEqual([]);
 	});
+
+	it("returns empty array for whitespace-only query", async () => {
+		const result = await fetchInternalHistory(null as never, "   ");
+		expect(result).toEqual([]);
+	});
 });
 ```
 
-Note: Full integration tests with a real DB are out of scope here — we test the keyword-filtering guard clause. The SQL query itself is straightforward and will be validated by the typecheck + manual test.
+Note: These tests verify the keyword-guard short-circuit (before DB is touched). The SQL query correctness is validated by typecheck + integration testing.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -336,7 +469,7 @@ Expected: FAIL — `fetchInternalHistory` is not exported.
 
 - [ ] **Step 3: Implement fetchInternalHistory**
 
-Add to `packages/analyzer/src/market-research.ts`. First, update the imports at the top of the file:
+Update imports at the top of `packages/analyzer/src/market-research.ts`:
 
 ```typescript
 import { type createDb, createLogger, listings } from "@bonplan/shared";
@@ -346,7 +479,7 @@ import type Redis from "ioredis";
 
 (Replace the existing `createLogger`-only import and add Drizzle imports.)
 
-Then add the `Db` type alias and the function after the existing utility functions, before `fetchMarketContext`:
+Add the `Db` type alias and function after the utility functions, before `fetchMarketContext`:
 
 ```typescript
 // ── Internal Price History ──────────────────────────────────────
@@ -365,8 +498,8 @@ export const fetchInternalHistory = async (db: Db, query: string): Promise<Compa
 
 	const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
-	// Build ILIKE pattern: "%keyword1%keyword2%"
-	const pattern = `%${keywords.join("%")}%`;
+	// Escape LIKE wildcards to prevent pattern injection, then build ILIKE pattern
+	const pattern = `%${keywords.map(escapeLike).join("%")}%`;
 
 	try {
 		const rows = await db
@@ -415,226 +548,12 @@ Expected: No errors.
 
 ```bash
 git add packages/analyzer/src/market-research.ts packages/analyzer/src/market-research.test.ts
-git commit -m "feat(analyzer): add fetchInternalHistory for sold-listing comparables"
+git commit -m "feat(analyzer): add fetchInternalHistory with ILIKE escape for sold-listing comparables"
 ```
 
 ---
 
-### Task 4: Restructure `fetchMarketContext()` to Return Structured Data
-
-**Files:**
-- Modify: `packages/analyzer/src/market-research.ts`
-- Modify: `packages/analyzer/src/market-research.test.ts`
-
-- [ ] **Step 1: Write test for the new return type**
-
-Add to `packages/analyzer/src/market-research.test.ts`:
-
-```typescript
-import { buildMarketContextString } from "./market-research";
-import type { Comparable } from "./market-research";
-
-describe("buildMarketContextString", () => {
-	it("formats comparables grouped by source with median", () => {
-		const comparables: Comparable[] = [
-			{ title: "RTX 4090 OC", price: 69900, source: "backmarket.fr" },
-			{ title: "RTX 4090 FE", price: 64000, source: "rakuten.com" },
-			{ title: "RTX 4090 occasion", price: 58000, source: "bonplan-history", date: "2026-03-15T10:00:00Z" },
-		];
-		const result = buildMarketContextString("RTX 4090", comparables, 64000);
-
-		expect(result).toContain('Comparables trouvés pour "RTX 4090"');
-		expect(result).toContain("backmarket.fr");
-		expect(result).toContain("rakuten.com");
-		expect(result).toContain("bonplan-history");
-		expect(result).toContain("699€");
-		expect(result).toContain("640€");
-		expect(result).toContain("580€");
-		expect(result).toContain("Prix médian occasion estimé : 640€");
-	});
-
-	it("omits median line when median is null", () => {
-		const result = buildMarketContextString("test", [{ title: "A", price: 10000, source: "searxng" }], null);
-		expect(result).not.toContain("Prix médian");
-	});
-});
-```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-Run:
-```bash
-cd packages/analyzer && bun test src/market-research.test.ts
-```
-
-Expected: FAIL — `buildMarketContextString` is not exported.
-
-- [ ] **Step 3: Add the context string builder**
-
-Add to `packages/analyzer/src/market-research.ts`, before `fetchMarketContext`:
-
-```typescript
-// ── Context String Builder ──────────────────────────────────────
-
-/** Build a formatted market context string for the AI prompt. */
-export const buildMarketContextString = (
-	searchQuery: string,
-	comparables: Comparable[],
-	median: number | null,
-): string => {
-	const lines: string[] = [`Comparables trouvés pour "${searchQuery}" :`];
-
-	const bySource: Record<string, Comparable[]> = {};
-	for (const c of comparables) {
-		(bySource[c.source] ??= []).push(c);
-	}
-
-	for (const [source, items] of Object.entries(bySource)) {
-		for (const item of items.slice(0, 3)) {
-			const priceEur = Math.round(item.price / 100);
-			lines.push(`- ${source}: "${item.title}" → ${priceEur}€`);
-		}
-	}
-
-	if (median !== null) {
-		lines.push("", `Prix médian occasion estimé : ${Math.round(median / 100)}€`);
-	}
-
-	lines.push(
-		"",
-		"Note: Les prix affichés sont des prix demandés. Les prix de transaction réels sont généralement 10-20% inférieurs sur LeBonCoin.",
-	);
-
-	return lines.join("\n");
-};
-```
-
-- [ ] **Step 4: Run tests to verify buildMarketContextString passes**
-
-Run:
-```bash
-cd packages/analyzer && bun test src/market-research.test.ts
-```
-
-Expected: ALL PASS
-
-- [ ] **Step 5: Rewrite `fetchMarketContext` to return `MarketResearchResult | null`**
-
-Replace the entire `fetchMarketContext` function in `packages/analyzer/src/market-research.ts` with:
-
-```typescript
-export const fetchMarketContext = async (
-	redis: Redis,
-	db: Db,
-	searchQuery: string,
-	searxngUrl: string | undefined,
-): Promise<MarketResearchResult | null> => {
-	const cacheKey = `${CACHE_PREFIX}${searchQuery.toLowerCase().trim().replace(/\s+/g, " ")}`;
-
-	// Check cache (now stores JSON)
-	const cached = await redis.get(cacheKey);
-	if (cached) {
-		try {
-			logger.info("Market research cache hit", { query: searchQuery });
-			return JSON.parse(cached) as MarketResearchResult;
-		} catch {
-			// Cache corrupted — refetch
-		}
-	}
-
-	try {
-		const allComparables: Comparable[] = [];
-
-		// 1. Site-scoped SearXNG queries (BackMarket, Rakuten)
-		if (searxngUrl) {
-			const sites = ["backmarket.fr", "rakuten.com"];
-			const siteResults = await Promise.all(
-				sites.map(async (site) => {
-					try {
-						const results = await fetchSearxng(searxngUrl, buildSiteQuery(searchQuery, site));
-						return parseSearxngComparables(results, site);
-					} catch {
-						return [];
-					}
-				}),
-			);
-			allComparables.push(...siteResults.flat());
-		}
-
-		// 2. Generic SearXNG queries (existing behavior)
-		if (searxngUrl) {
-			const queries = buildMarketQueries(searchQuery);
-			const allResults = await Promise.all(queries.map((q) => fetchSearxng(searxngUrl, q)));
-
-			const seen = new Set<string>(allComparables.map((c) => c.title.toLowerCase().trim()));
-			for (const results of allResults) {
-				const comparables = parseSearxngComparables(results, "searxng");
-				for (const c of comparables) {
-					const key = c.title.toLowerCase().trim();
-					if (!seen.has(key)) {
-						seen.add(key);
-						allComparables.push(c);
-					}
-				}
-			}
-		}
-
-		// 3. Internal price history (sold listings)
-		const internalComparables = await fetchInternalHistory(db, searchQuery);
-		allComparables.push(...internalComparables);
-
-		if (allComparables.length === 0) return null;
-
-		const median = computeMedian(allComparables.map((c) => c.price));
-		const context = buildMarketContextString(searchQuery, allComparables, median);
-
-		const result: MarketResearchResult = { context, comparables: allComparables, median };
-
-		// Cache for 24 hours
-		await redis.set(cacheKey, JSON.stringify(result), "EX", CACHE_TTL_SECONDS);
-		logger.info("Market research fetched and cached", { query: searchQuery, resultCount: allComparables.length });
-
-		return result;
-	} catch (err) {
-		const error = err instanceof Error ? err : new Error(String(err));
-		logger.warn("Market research failed", { query: searchQuery, error: error.message });
-		return null;
-	}
-};
-```
-
-- [ ] **Step 6: Remove old unused code**
-
-Delete the old deduplication logic and context-building code that was in the previous `fetchMarketContext` implementation. The `fetchSearxng` private function stays unchanged.
-
-- [ ] **Step 7: Run typecheck**
-
-Run:
-```bash
-cd packages/analyzer && bun run typecheck
-```
-
-Expected: Errors in `analyze.ts` because `fetchMarketContext` signature changed (now requires `db` parameter and returns `MarketResearchResult | null` instead of `string | null`). These will be fixed in Task 8.
-
-- [ ] **Step 8: Run market-research tests**
-
-Run:
-```bash
-cd packages/analyzer && bun test src/market-research.test.ts
-```
-
-Expected: ALL PASS (the pure unit tests still work; existing tests for `buildMarketQueries` unchanged).
-
-- [ ] **Step 9: Commit**
-
-```bash
-git add packages/analyzer/src/market-research.ts packages/analyzer/src/market-research.test.ts
-git commit -m "feat(analyzer): restructure fetchMarketContext to return structured MarketResearchResult"
-```
-
----
-
-### Task 5: Update Scoring Schema — Add `comparables` to AI Response
+### Task 4: Update Scoring Schema — Add `comparables` to AI Response
 
 **Files:**
 - Modify: `packages/analyzer/src/scoring.ts`
@@ -709,16 +628,16 @@ cd packages/analyzer && bun test src/scoring.test.ts
 
 Expected: FAIL — `comparables` is not in the schema.
 
-- [ ] **Step 3: Add comparableSchema and extend analysisResultSchema**
+- [ ] **Step 3: Update scoring.ts with comparableSchema**
 
-In `packages/analyzer/src/scoring.ts`, add the comparable schema and extend the analysis result:
+Replace the entire content of `packages/analyzer/src/scoring.ts` with:
 
 ```typescript
 import { z } from "zod";
 
 export const comparableSchema = z.object({
 	title: z.string(),
-	price: z.number().min(0).transform(Math.round),
+	price: z.number().min(0).transform(Math.round), // EUR from AI (converted to cents in saveAnalysis)
 	source: z.string(),
 	date: z.string().optional(),
 });
@@ -774,7 +693,7 @@ git commit -m "feat(analyzer): add comparables field to analysis result schema"
 
 ---
 
-### Task 6: Update AI Prompts — Structured Comparables & Bullet-Point Verdicts
+### Task 5: Update AI Prompts — Structured Comparables & Bullet-Point Verdicts
 
 **Files:**
 - Modify: `packages/analyzer/src/prompts.ts`
@@ -854,9 +773,17 @@ Expected: FAIL — system prompt doesn't contain `"comparables"` or `"bullet"`.
 
 - [ ] **Step 3: Update SYSTEM_PROMPT in prompts.ts**
 
-In `packages/analyzer/src/prompts.ts`, update the `SYSTEM_PROMPT`. Make these specific changes:
+In `packages/analyzer/src/prompts.ts`, make two changes to the `SYSTEM_PROMPT` string:
 
-**a)** At line ~122 (JSON example section), replace the JSON fields block with:
+**a)** Before the JSON example block (around line 117), add these instructions:
+
+```
+**Verdict format:** Le verdict DOIT être en 2-3 bullet points (• ligne1\n• ligne2), PAS un paragraphe. Chaque point doit être concis (< 15 mots).
+
+**Comparables:** Retourne les 3-5 prix comparables les plus pertinents parmi les données de recherche marché fournies. Chaque comparable a: title (string), price (number en EUR), source (string). Si aucune donnée marché n'est fournie, retourne un tableau vide [].
+```
+
+**b)** Replace the JSON fields example block with:
 
 ```
 Each result object must have these fields (put reasoning FIRST):
@@ -872,14 +799,6 @@ Each result object must have these fields (put reasoning FIRST):
   "redFlags": [] or ["Annonce peu détaillée", "Pas de photos"],
   "comparables": [{"title": "Produit similaire", "price": 650, "source": "backmarket.fr"}]
 }
-```
-
-**b)** Before the JSON example, add an instruction about verdict format:
-
-```
-**Verdict format:** Le verdict DOIT être en 2-3 bullet points (• ligne1\n• ligne2), PAS un paragraphe. Chaque point doit être concis (< 15 mots).
-
-**Comparables:** Retourne les 3-5 prix comparables les plus pertinents parmi les données de recherche marché fournies. Chaque comparable a: title (string), price (number en EUR), source (string). Si aucune donnée marché n'est fournie, retourne un tableau vide [].
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -900,24 +819,227 @@ git commit -m "feat(analyzer): update prompts for structured comparables and bul
 
 ---
 
-### Task 7: Update `analyze.ts` — Wire Structured Market Data & Compute Discount
+### Task 6: Restructure `fetchMarketContext` + Integrate into `analyze.ts`
+
+This task is intentionally merged (market-research restructure + analyze.ts integration) to avoid breaking the typecheck between commits.
 
 **Files:**
+- Modify: `packages/analyzer/src/market-research.ts`
+- Modify: `packages/analyzer/src/market-research.test.ts`
 - Modify: `packages/analyzer/src/analyze.ts`
 
-This is the integration task — no new tests (the existing flow is covered by the unit tests above, and integration testing requires a full Redis/DB/AI setup).
+- [ ] **Step 1: Write tests for buildMarketContextString**
 
-- [ ] **Step 1: Update imports in analyze.ts**
-
-In `packages/analyzer/src/analyze.ts`, update the import from `market-research`:
+Add to `packages/analyzer/src/market-research.test.ts`:
 
 ```typescript
-import { fetchMarketContext, type MarketResearchResult } from "./market-research";
+import { buildMarketContextString } from "./market-research";
+import type { Comparable } from "./market-research";
+
+describe("buildMarketContextString", () => {
+	it("formats comparables grouped by source with median", () => {
+		const comparables: Comparable[] = [
+			{ title: "RTX 4090 OC", price: 69900, source: "backmarket.fr" },
+			{ title: "RTX 4090 FE", price: 64000, source: "rakuten.com" },
+			{ title: "RTX 4090 occasion", price: 58000, source: "bonplan-history", date: "2026-03-15T10:00:00Z" },
+		];
+		const result = buildMarketContextString("RTX 4090", comparables, 64000);
+
+		expect(result).toContain('Comparables trouvés pour "RTX 4090"');
+		expect(result).toContain("backmarket.fr");
+		expect(result).toContain("rakuten.com");
+		expect(result).toContain("bonplan-history");
+		expect(result).toContain("699€");
+		expect(result).toContain("640€");
+		expect(result).toContain("580€");
+		expect(result).toContain("Prix médian occasion estimé : 640€");
+	});
+
+	it("omits median line when median is null", () => {
+		const result = buildMarketContextString("test", [{ title: "A", price: 10000, source: "searxng" }], null);
+		expect(result).not.toContain("Prix médian");
+	});
+
+	it("limits to 3 items per source", () => {
+		const comparables: Comparable[] = Array.from({ length: 5 }, (_, i) => ({
+			title: `Item ${i}`,
+			price: (i + 1) * 10000,
+			source: "backmarket.fr",
+		}));
+		const result = buildMarketContextString("test", comparables, null);
+		const lines = result.split("\n").filter((l) => l.startsWith("- backmarket.fr"));
+		expect(lines).toHaveLength(3);
+	});
+});
 ```
 
-- [ ] **Step 2: Update `saveAnalysis` signature and body**
+- [ ] **Step 2: Run tests to see them fail**
 
-Replace the `saveAnalysis` function with:
+Run:
+```bash
+cd packages/analyzer && bun test src/market-research.test.ts
+```
+
+Expected: FAIL — `buildMarketContextString` is not exported.
+
+- [ ] **Step 3: Add buildMarketContextString to market-research.ts**
+
+Add before `fetchMarketContext`:
+
+```typescript
+// ── Context String Builder ──────────────────────────────────────
+
+/** Build a formatted market context string for the AI prompt. */
+export const buildMarketContextString = (
+	searchQuery: string,
+	comparables: Comparable[],
+	median: number | null,
+): string => {
+	const lines: string[] = [`Comparables trouvés pour "${searchQuery}" :`];
+
+	const bySource: Record<string, Comparable[]> = {};
+	for (const c of comparables) {
+		(bySource[c.source] ??= []).push(c);
+	}
+
+	for (const [source, items] of Object.entries(bySource)) {
+		for (const item of items.slice(0, 3)) {
+			const priceEur = Math.round(item.price / 100);
+			lines.push(`- ${source}: "${item.title}" → ${priceEur}€`);
+		}
+	}
+
+	if (median !== null) {
+		lines.push("", `Prix médian occasion estimé : ${Math.round(median / 100)}€`);
+	}
+
+	lines.push(
+		"",
+		"Note: Les prix affichés sont des prix demandés. Les prix de transaction réels sont généralement 10-20% inférieurs sur LeBonCoin.",
+	);
+
+	return lines.join("\n");
+};
+```
+
+- [ ] **Step 4: Run tests to verify buildMarketContextString passes**
+
+Run:
+```bash
+cd packages/analyzer && bun test src/market-research.test.ts
+```
+
+Expected: ALL PASS
+
+- [ ] **Step 5: Rewrite `fetchMarketContext` with structured return + parallelized sources + validated cache**
+
+Replace the entire `fetchMarketContext` function in `packages/analyzer/src/market-research.ts`:
+
+```typescript
+export const fetchMarketContext = async (
+	redis: Redis,
+	db: Db,
+	searchQuery: string,
+	searxngUrl: string | undefined,
+): Promise<MarketResearchResult | null> => {
+	const cacheKey = `${CACHE_PREFIX}${searchQuery.toLowerCase().trim().replace(/\s+/g, " ")}`;
+
+	// Check cache (stores JSON since v2 — validate structure)
+	const cached = await redis.get(cacheKey);
+	if (cached) {
+		try {
+			const parsed = JSON.parse(cached);
+			if (parsed && typeof parsed === "object" && "context" in parsed && "comparables" in parsed) {
+				logger.info("Market research cache hit", { query: searchQuery });
+				return parsed as MarketResearchResult;
+			}
+			// Old format (plain string) or invalid — refetch
+		} catch {
+			// Corrupted cache — refetch
+		}
+	}
+
+	try {
+		// Fetch all 3 source groups in parallel for minimal latency
+		const [siteResults, genericResults, internalComparables] = await Promise.all([
+			// 1. Site-scoped SearXNG (BackMarket, Rakuten)
+			searxngUrl
+				? Promise.all(
+						["backmarket.fr", "rakuten.com"].map(async (site) => {
+							try {
+								const results = await fetchSearxng(searxngUrl, buildSiteQuery(searchQuery, site));
+								return parseSearxngComparables(results, site);
+							} catch {
+								return [];
+							}
+						}),
+					)
+				: Promise.resolve([] as Comparable[][]),
+
+			// 2. Generic SearXNG queries
+			searxngUrl
+				? Promise.all(buildMarketQueries(searchQuery).map((q) => fetchSearxng(searxngUrl, q)))
+				: Promise.resolve([] as Array<Array<{ title: string; content: string }>>),
+
+			// 3. Internal price history (sold listings)
+			fetchInternalHistory(db, searchQuery),
+		]);
+
+		const allComparables: Comparable[] = [];
+
+		// Add site-scoped results
+		allComparables.push(...siteResults.flat());
+
+		// Add generic results with deduplication
+		const seen = new Set<string>(allComparables.map((c) => c.title.toLowerCase().trim()));
+		for (const results of genericResults) {
+			for (const c of parseSearxngComparables(results, "searxng")) {
+				const key = c.title.toLowerCase().trim();
+				if (!seen.has(key)) {
+					seen.add(key);
+					allComparables.push(c);
+				}
+			}
+		}
+
+		// Add internal history
+		allComparables.push(...internalComparables);
+
+		if (allComparables.length === 0) return null;
+
+		const median = computeMedian(allComparables.map((c) => c.price));
+		const context = buildMarketContextString(searchQuery, allComparables, median);
+
+		const result: MarketResearchResult = { context, comparables: allComparables, median };
+
+		// Cache for 24 hours
+		await redis.set(cacheKey, JSON.stringify(result), "EX", CACHE_TTL_SECONDS);
+		logger.info("Market research fetched and cached", { query: searchQuery, resultCount: allComparables.length });
+
+		return result;
+	} catch (err) {
+		const error = err instanceof Error ? err : new Error(String(err));
+		logger.warn("Market research failed", { query: searchQuery, error: error.message });
+		return null;
+	}
+};
+```
+
+- [ ] **Step 6: Remove old deduplication code**
+
+Delete any remaining old context-building code from the previous `fetchMarketContext` implementation. The `fetchSearxng` private function stays unchanged.
+
+- [ ] **Step 7: Update imports in analyze.ts**
+
+In `packages/analyzer/src/analyze.ts`, update the market-research import:
+
+```typescript
+import { computeDiscount, fetchMarketContext, type MarketResearchResult } from "./market-research";
+```
+
+- [ ] **Step 8: Update `saveAnalysis` with new fields**
+
+Replace `saveAnalysis` in `packages/analyzer/src/analyze.ts`:
 
 ```typescript
 const saveAnalysis = async (
@@ -935,14 +1057,9 @@ const saveAnalysis = async (
 	const marketPriceHighCents = data.marketPriceHigh !== null ? data.marketPriceHigh * 100 : null;
 
 	// Convert AI comparables from EUR to cents for storage
-	const comparablesCents = data.comparables.map((c) => ({
-		...c,
-		price: c.price * 100,
-	}));
+	const comparablesCents = data.comparables.map((c) => ({ ...c, price: c.price * 100 }));
 
-	// Compute discount: positive = below market, negative = above market
-	const discount =
-		marketMedian !== null && marketMedian > 0 ? Math.round((1 - listingPrice / marketMedian) * 100) : null;
+	const discount = computeDiscount(listingPrice, marketMedian);
 
 	const values = {
 		listingId,
@@ -968,22 +1085,7 @@ const saveAnalysis = async (
 		.values(values)
 		.onConflictDoUpdate({
 			target: [analyses.listingId, analyses.searchId],
-			set: {
-				matchesQuery: data.matchesQuery,
-				listingType: data.listingType ?? null,
-				score: data.score,
-				verdict: data.verdict,
-				marketPriceLow: marketPriceLowCents,
-				marketPriceHigh: marketPriceHighCents,
-				redFlags: data.redFlags,
-				reasoning: data.reasoning,
-				modelUsed: userModel,
-				providerUsed: userProvider,
-				comparables: comparablesCents,
-				marketMedian,
-				discount,
-				updatedAt: new Date(),
-			},
+			set: { ...values, updatedAt: new Date() },
 		})
 		.returning({ id: analyses.id });
 
@@ -1000,9 +1102,19 @@ const saveAnalysis = async (
 };
 ```
 
-- [ ] **Step 3: Update `analyzeSingle` signature**
+- [ ] **Step 9: Update `saveFailedAnalysis` with new null columns**
 
-Change the `marketContext` parameter from `string | null` to `MarketResearchResult | null` and pass the new fields to `saveAnalysis`:
+In `saveFailedAnalysis`, add the 3 new fields with null values in both the `.values()` and `.onConflictDoUpdate()` blocks:
+
+```typescript
+			comparables: null,
+			marketMedian: null,
+			discount: null,
+```
+
+- [ ] **Step 10: Update `analyzeSingle` signature and body**
+
+Change parameter `marketContext: string | null` to `marketResult: MarketResearchResult | null`:
 
 ```typescript
 const analyzeSingle = async (
@@ -1019,162 +1131,47 @@ const analyzeSingle = async (
 	marketResult: MarketResearchResult | null,
 	allowBundles: boolean,
 ): Promise<void> => {
-	const seller = extractSellerInfo(listing);
-	const prompt = buildAnalysisPrompt({
-		searchQuery,
-		judgmentCriteria: aiContext.judgmentCriteria,
-		listing: {
-			title: listing.title,
-			price: listing.price,
-			description: listing.description,
-			sellerType: listing.sellerType,
-			...seller,
-			location: listing.location,
-			images: listing.images ?? [],
-		},
+```
+
+In the body, change the prompt call to use `marketResult?.context ?? null`:
+
+```typescript
 		marketContext: marketResult?.context ?? null,
-		allowBundles,
-	});
+```
 
-	const { data } = await generateStructured({
-		providerType,
-		apiKey,
-		model: userModel,
-		schema: analysisResultSchema,
-		system: prompt.system,
-		prompt: prompt.user,
-		maxOutputTokens: 2048,
-	});
+And update the `saveAnalysis` call to pass the two new args:
 
-	const result = normalizeMarketPrices(data);
+```typescript
 	await saveAnalysis(deps, listing.id, searchId, userId, result, userModel, userProvider, marketResult?.median ?? null, listing.price);
-	logger.info("Listing analyzed (single)", { listingId: listing.id, score: result.score });
-};
 ```
 
-- [ ] **Step 4: Update `analyzeBatch` signature**
+- [ ] **Step 11: Update `analyzeBatch` the same way**
 
-Same change — replace `marketContext: string | null` with `marketResult: MarketResearchResult | null`:
-
-In the `analyzeBatch` function:
 1. Change parameter `marketContext: string | null` → `marketResult: MarketResearchResult | null`
-2. In the `buildBatchAnalysisPrompt` call, change `marketContext` → `marketContext: marketResult?.context ?? null`
-3. In the `saveAnalysis` call (line ~330), add new args: `marketResult?.median ?? null, listing.price`
-4. In the single-fallback calls inside `analyzeBatch`, pass `marketResult` instead of `marketContext`
+2. In `buildBatchAnalysisPrompt` call: `marketContext: marketResult?.context ?? null`
+3. In `saveAnalysis` calls: add `marketResult?.median ?? null, listing.price`
+4. In fallback `analyzeSingle` calls: pass `marketResult` instead of `marketContext`
 
-- [ ] **Step 5: Update `saveFailedAnalysis`**
+- [ ] **Step 12: Update `startAnalysisConsumer`**
 
-Add the three new columns with null values to `saveFailedAnalysis`:
-
-```typescript
-const saveFailedAnalysis = async (
-	deps: AnalyzeDeps,
-	listingId: string,
-	searchId: string,
-	userId: string,
-	error: string,
-	userModel: string,
-	userProvider: string,
-): Promise<void> => {
-	await deps.db
-		.insert(analyses)
-		.values({
-			listingId,
-			searchId,
-			userId,
-			matchesQuery: false,
-			score: null,
-			verdict: "Analysis failed",
-			marketPriceLow: null,
-			marketPriceHigh: null,
-			redFlags: [],
-			reasoning: `Parse error: ${error}`,
-			modelUsed: userModel,
-			providerUsed: userProvider,
-			comparables: null,
-			marketMedian: null,
-			discount: null,
-		})
-		.onConflictDoUpdate({
-			target: [analyses.listingId, analyses.searchId],
-			set: {
-				matchesQuery: false,
-				score: null,
-				verdict: "Analysis failed",
-				marketPriceLow: null,
-				marketPriceHigh: null,
-				redFlags: [],
-				reasoning: `Parse error: ${error}`,
-				modelUsed: userModel,
-				providerUsed: userProvider,
-				comparables: null,
-				marketMedian: null,
-				discount: null,
-				updatedAt: new Date(),
-			},
-		});
-};
-```
-
-- [ ] **Step 6: Update `startAnalysisConsumer` to pass `db` to `fetchMarketContext`**
-
-In the consumer callback (around line 441), change:
+At the call site (around line 441), change:
 
 ```typescript
-// Fetch market context once (cached 24h)
 const marketResult = await fetchMarketContext(deps.redis, deps.db, searchQuery, deps.config.searxngUrl);
 ```
 
-And update all calls to `analyzeSingle` and `analyzeBatch` in the consumer to pass `marketResult` instead of `marketContext`.
+Replace all occurrences of `marketContext` with `marketResult` in the consumer callback (the calls to `analyzeSingle` and `analyzeBatch`).
 
-Specifically, replace every occurrence of `marketContext` in the consumer callback with `marketResult`. The calls look like:
-
-```typescript
-await analyzeSingle(
-	deps,
-	batch[0] as ListingRow,
-	searchId,
-	userId,
-	searchQuery,
-	aiContext,
-	userProvider,
-	apiKey,
-	userModel,
-	userProvider,
-	marketResult,
-	search.allowBundles,
-);
-```
-
-and:
-
-```typescript
-await analyzeBatch(
-	deps,
-	batch,
-	searchId,
-	userId,
-	searchQuery,
-	aiContext,
-	userProvider,
-	apiKey,
-	userModel,
-	userProvider,
-	marketResult,
-	search.allowBundles,
-);
-```
-
-- [ ] **Step 7: Run typecheck**
+- [ ] **Step 13: Run typecheck**
 
 Run:
 ```bash
 cd packages/analyzer && bun run typecheck
 ```
 
-Expected: No errors. If there are errors, fix the type mismatches.
+Expected: No errors.
 
-- [ ] **Step 8: Run all analyzer tests**
+- [ ] **Step 14: Run all analyzer tests**
 
 Run:
 ```bash
@@ -1183,23 +1180,23 @@ cd packages/analyzer && bun test
 
 Expected: ALL PASS
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 15: Commit**
 
 ```bash
-git add packages/analyzer/src/analyze.ts
-git commit -m "feat(analyzer): integrate structured market data, compute discount and median"
+git add packages/analyzer/src/market-research.ts packages/analyzer/src/market-research.test.ts packages/analyzer/src/analyze.ts
+git commit -m "feat(analyzer): restructure fetchMarketContext + integrate structured market data into analysis pipeline"
 ```
 
 ---
 
-### Task 8: Update Gateway Schema — Add New Fields to API Response
+### Task 7: Update Gateway Schema — Add New Fields to API Response
 
 **Files:**
 - Modify: `packages/gateway/src/schemas/shared.ts`
 
 - [ ] **Step 1: Add 3 new fields to `analysisResponseSchema`**
 
-In `packages/gateway/src/schemas/shared.ts`, extend `analysisResponseSchema` with the new fields. Add after the `providerUsed` field:
+In `packages/gateway/src/schemas/shared.ts`, extend `analysisResponseSchema` with the new fields after `providerUsed`:
 
 ```typescript
 	comparables: z
@@ -1223,7 +1220,7 @@ Run:
 bun run typecheck
 ```
 
-Expected: No errors. The gateway handlers return `analyses.*` from DB which now includes the new columns, and the response schema accepts them.
+Expected: No errors.
 
 - [ ] **Step 3: Run all tests**
 
@@ -1252,7 +1249,7 @@ git commit -m "feat(gateway): add comparables, marketMedian, discount to analysi
 
 ---
 
-### Task 9: Final Verification & Cleanup
+### Task 8: Final Verification & Cleanup
 
 **Files:** None (verification only)
 
@@ -1300,9 +1297,9 @@ bun run dev
 ```
 
 Verify in DB that new analyses have:
-- `comparables` populated with structured data
-- `market_median` computed from market research
-- `discount` computed from listing price vs median
+- `comparables` populated with structured data (prices in cents)
+- `market_median` computed from market research (cents)
+- `discount` computed from listing price vs median (percentage)
 
 - [ ] **Step 6: Final commit (if any cleanup needed)**
 
