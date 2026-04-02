@@ -7,6 +7,7 @@ import {
 	computeMedian,
 	escapeLike,
 	extractPrice,
+	fetchInternalHistory,
 	parseSearxngComparables,
 } from "./market-research";
 
@@ -218,5 +219,24 @@ describe("escapeLike", () => {
 
 	it("leaves normal text unchanged", () => {
 		expect(escapeLike("RTX 4090")).toBe("RTX 4090");
+	});
+});
+
+// ── fetchInternalHistory ────────────────────────────────────────
+
+describe("fetchInternalHistory", () => {
+	it("returns empty array when query has no meaningful keywords", async () => {
+		const result = await fetchInternalHistory(null as never, "a b");
+		expect(result).toEqual([]);
+	});
+
+	it("returns empty array for empty query", async () => {
+		const result = await fetchInternalHistory(null as never, "");
+		expect(result).toEqual([]);
+	});
+
+	it("returns empty array for whitespace-only query", async () => {
+		const result = await fetchInternalHistory(null as never, "   ");
+		expect(result).toEqual([]);
 	});
 });

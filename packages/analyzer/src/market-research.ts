@@ -1,6 +1,7 @@
 // packages/analyzer/src/market-research.ts
 
-import { createLogger } from "@bonplan/shared";
+import { type createDb, createLogger, listings } from "@bonplan/shared";
+import { and, desc, ilike, lt } from "drizzle-orm";
 import type Redis from "ioredis";
 
 const logger = createLogger("analyzer");
@@ -129,6 +130,49 @@ const fetchSearxng = async (searxngUrl: string, query: string): Promise<Array<{ 
 	return data.results
 		.filter((r) => r.title && r.content)
 		.map((r) => ({ title: r.title as string, content: r.content as string }));
+};
+
+// ── Internal Price History ──────────────────────────────────────
+
+type Db = ReturnType<typeof createDb>["db"];
+
+/** Fetch "sold" listings (not re-scraped in 48h) matching the query as comparables. */
+export const fetchInternalHistory = async (db: Db, query: string): Promise<Comparable[]> => {
+	const keywords = query
+		.toLowerCase()
+		.trim()
+		.split(/\s+/)
+		.filter((k) => k.length > 2);
+
+	if (keywords.length === 0) return [];
+
+	const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
+
+	// Escape LIKE wildcards to prevent pattern injection, then build ILIKE pattern
+	const pattern = `%${keywords.map(escapeLike).join("%")}%`;
+
+	try {
+		const rows = await db
+			.select({
+				title: listings.title,
+				price: listings.price,
+				updatedAt: listings.updatedAt,
+			})
+			.from(listings)
+			.where(and(ilike(listings.title, pattern), lt(listings.updatedAt, cutoff)))
+			.orderBy(desc(listings.updatedAt))
+			.limit(10);
+
+		return rows.map((r) => ({
+			title: r.title,
+			price: r.price, // already in cents
+			source: "bonplan-history",
+			date: r.updatedAt.toISOString(),
+		}));
+	} catch (err) {
+		logger.warn("Internal history fetch failed", { query, error: err instanceof Error ? err.message : String(err) });
+		return [];
+	}
 };
 
 export const fetchMarketContext = async (
