@@ -17,7 +17,7 @@ import { getDefaultModel, type ProviderType } from "@bonplan/shared/ai-models";
 import { and, eq, inArray } from "drizzle-orm";
 import type Redis from "ioredis";
 import { z } from "zod";
-import { fetchMarketContext } from "./market-research";
+import { computeDiscount, fetchMarketContext, type MarketResearchResult } from "./market-research";
 import { buildAnalysisPrompt, buildBatchAnalysisPrompt } from "./prompts";
 import {
 	type AnalysisResult,
@@ -64,48 +64,49 @@ type ListingRow = typeof listings.$inferSelect;
 
 const saveAnalysis = async (
 	deps: AnalyzeDeps,
-	listingId: string,
-	searchId: string,
-	userId: string,
-	data: AnalysisResult,
-	userModel: string,
-	userProvider: string,
+	params: {
+		listingId: string;
+		searchId: string;
+		userId: string;
+		data: AnalysisResult;
+		userModel: string;
+		userProvider: string;
+		marketMedian: number | null;
+		listingPrice: number;
+	},
 ): Promise<void> => {
+	const { listingId, searchId, userId, data, userModel, userProvider, marketMedian, listingPrice } = params;
+
 	const marketPriceLowCents = data.marketPriceLow !== null ? data.marketPriceLow * 100 : null;
 	const marketPriceHighCents = data.marketPriceHigh !== null ? data.marketPriceHigh * 100 : null;
 
+	// Convert AI comparables from EUR to cents for storage
+	const comparablesCents = data.comparables.map((c) => ({ ...c, price: c.price * 100 }));
+
+	const discount = computeDiscount(listingPrice, marketMedian);
+
+	const payload = {
+		matchesQuery: data.matchesQuery,
+		listingType: data.listingType ?? null,
+		score: data.score,
+		verdict: data.verdict,
+		marketPriceLow: marketPriceLowCents,
+		marketPriceHigh: marketPriceHighCents,
+		redFlags: data.redFlags,
+		reasoning: data.reasoning,
+		modelUsed: userModel,
+		providerUsed: userProvider,
+		comparables: comparablesCents,
+		marketMedian,
+		discount,
+	};
+
 	const [upserted] = await deps.db
 		.insert(analyses)
-		.values({
-			listingId,
-			searchId,
-			userId,
-			matchesQuery: data.matchesQuery,
-			listingType: data.listingType ?? null,
-			score: data.score,
-			verdict: data.verdict,
-			marketPriceLow: marketPriceLowCents,
-			marketPriceHigh: marketPriceHighCents,
-			redFlags: data.redFlags,
-			reasoning: data.reasoning,
-			modelUsed: userModel,
-			providerUsed: userProvider,
-		})
+		.values({ listingId, searchId, userId, ...payload })
 		.onConflictDoUpdate({
 			target: [analyses.listingId, analyses.searchId],
-			set: {
-				matchesQuery: data.matchesQuery,
-				listingType: data.listingType ?? null,
-				score: data.score,
-				verdict: data.verdict,
-				marketPriceLow: marketPriceLowCents,
-				marketPriceHigh: marketPriceHighCents,
-				redFlags: data.redFlags,
-				reasoning: data.reasoning,
-				modelUsed: userModel,
-				providerUsed: userProvider,
-				updatedAt: new Date(),
-			},
+			set: { ...payload, updatedAt: new Date() },
 		})
 		.returning({ id: analyses.id });
 
@@ -145,6 +146,9 @@ const saveFailedAnalysis = async (
 			reasoning: `Parse error: ${error}`,
 			modelUsed: userModel,
 			providerUsed: userProvider,
+			comparables: null,
+			marketMedian: null,
+			discount: null,
 		})
 		.onConflictDoUpdate({
 			target: [analyses.listingId, analyses.searchId],
@@ -158,6 +162,9 @@ const saveFailedAnalysis = async (
 				reasoning: `Parse error: ${error}`,
 				modelUsed: userModel,
 				providerUsed: userProvider,
+				comparables: null,
+				marketMedian: null,
+				discount: null,
 				updatedAt: new Date(),
 			},
 		});
@@ -176,7 +183,7 @@ const analyzeSingle = async (
 	apiKey: string,
 	userModel: string,
 	userProvider: string,
-	marketContext: string | null,
+	marketResult: MarketResearchResult | null,
 	allowBundles: boolean,
 ): Promise<void> => {
 	const seller = extractSellerInfo(listing);
@@ -192,7 +199,7 @@ const analyzeSingle = async (
 			location: listing.location,
 			images: listing.images ?? [],
 		},
-		marketContext,
+		marketContext: marketResult?.context ?? null,
 		allowBundles,
 	});
 
@@ -207,7 +214,16 @@ const analyzeSingle = async (
 	});
 
 	const result = normalizeMarketPrices(data);
-	await saveAnalysis(deps, listing.id, searchId, userId, result, userModel, userProvider);
+	await saveAnalysis(deps, {
+		listingId: listing.id,
+		searchId,
+		userId,
+		data: result,
+		userModel,
+		userProvider,
+		marketMedian: marketResult?.median ?? null,
+		listingPrice: listing.price,
+	});
 	logger.info("Listing analyzed (single)", { listingId: listing.id, score: result.score });
 };
 
@@ -226,7 +242,7 @@ const analyzeBatch = async (
 	apiKey: string,
 	userModel: string,
 	userProvider: string,
-	marketContext: string | null,
+	marketResult: MarketResearchResult | null,
 	allowBundles: boolean,
 ): Promise<void> => {
 	// Build batch prompt with numbered items
@@ -247,7 +263,7 @@ const analyzeBatch = async (
 		searchQuery,
 		judgmentCriteria: aiContext.judgmentCriteria,
 		items,
-		marketContext,
+		marketContext: marketResult?.context ?? null,
 		allowBundles,
 	});
 
@@ -289,7 +305,7 @@ const analyzeBatch = async (
 					apiKey,
 					userModel,
 					userProvider,
-					marketContext,
+					marketResult,
 					allowBundles,
 				);
 			} catch (singleErr) {
@@ -327,7 +343,16 @@ const analyzeBatch = async (
 			continue;
 		}
 
-		await saveAnalysis(deps, listing.id, searchId, userId, result, userModel, userProvider);
+		await saveAnalysis(deps, {
+			listingId: listing.id,
+			searchId,
+			userId,
+			data: result,
+			userModel,
+			userProvider,
+			marketMedian: marketResult?.median ?? null,
+			listingPrice: listing.price,
+		});
 		logger.info("Listing analyzed (batch)", { listingId: listing.id, score: result.score });
 	}
 
@@ -347,7 +372,7 @@ const analyzeBatch = async (
 					apiKey,
 					userModel,
 					userProvider,
-					marketContext,
+					marketResult,
 					allowBundles,
 				);
 			} catch (err) {
@@ -437,8 +462,8 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 			const userProvider = (user.aiProvider ?? "claude") as ProviderType;
 			const userModel = user.aiModel ?? getDefaultModel(userProvider);
 
-			// Fetch market context once (cached 1h)
-			const marketContext = await fetchMarketContext(deps.redis, searchQuery, deps.config.searxngUrl);
+			// Fetch market context once (cached 24h)
+			const marketResult = await fetchMarketContext(deps.redis, deps.db, searchQuery, deps.config.searxngUrl);
 
 			// Fetch all listings and filter those needing analysis
 			const allListings =
@@ -503,7 +528,7 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 							apiKey,
 							userModel,
 							userProvider,
-							marketContext,
+							marketResult,
 							search.allowBundles,
 						);
 					} else {
@@ -519,7 +544,7 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 							apiKey,
 							userModel,
 							userProvider,
-							marketContext,
+							marketResult,
 							search.allowBundles,
 						);
 					}

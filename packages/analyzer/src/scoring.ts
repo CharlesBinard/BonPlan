@@ -1,5 +1,13 @@
-// packages/analyzer/src/scoring.ts
 import { z } from "zod";
+
+export const comparableSchema = z.object({
+	title: z.string(),
+	price: z.number().min(0).transform(Math.round), // EUR from AI (converted to cents in saveAnalysis)
+	source: z.string(),
+	date: z.string().optional(),
+});
+
+export type AiComparable = z.infer<typeof comparableSchema>;
 
 export const analysisResultSchema = z.object({
 	reasoning: z.string().min(1),
@@ -10,6 +18,7 @@ export const analysisResultSchema = z.object({
 	marketPriceLow: z.number().min(0).transform(Math.round).nullable(),
 	marketPriceHigh: z.number().min(0).transform(Math.round).nullable(),
 	redFlags: z.array(z.string()),
+	comparables: z.array(comparableSchema).default([]),
 });
 
 export type AnalysisResult = z.infer<typeof analysisResultSchema>;

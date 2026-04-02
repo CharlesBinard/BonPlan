@@ -68,6 +68,18 @@ export const analysisResponseSchema = z.object({
 	reasoning: z.string(),
 	modelUsed: z.string(),
 	providerUsed: z.string().nullable(),
+	comparables: z
+		.array(
+			z.object({
+				title: z.string(),
+				price: z.number().int(),
+				source: z.string(),
+				date: z.string().optional(),
+			}),
+		)
+		.nullable(),
+	marketMedian: z.number().int().nullable(),
+	discount: z.number().int().nullable(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
 });

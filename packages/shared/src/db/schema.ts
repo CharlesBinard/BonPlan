@@ -208,6 +208,14 @@ export const analyses = pgTable(
 		reasoning: text("reasoning").notNull(),
 		modelUsed: text("model_used").notNull(),
 		providerUsed: text("provider_used"),
+		comparables: jsonb("comparables").$type<Array<{
+			title: string;
+			price: number;
+			source: string;
+			date?: string;
+		}> | null>(),
+		marketMedian: integer("market_median"),
+		discount: integer("discount"),
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true })
 			.notNull()

@@ -1,8 +1,48 @@
 // packages/analyzer/src/prompts.test.ts
 import { describe, expect, it } from "bun:test";
-import { buildAnalysisPrompt } from "./prompts";
+import { buildAnalysisPrompt, buildBatchAnalysisPrompt } from "./prompts";
+
+const baseListing = {
+	title: "RTX 4090 Gaming OC",
+	price: 65000,
+	description: "Très bon état",
+	sellerType: "particulier",
+	location: "Paris",
+	images: ["img1.jpg"],
+};
 
 describe("buildAnalysisPrompt", () => {
+	it("includes comparables field in JSON example", () => {
+		const { system } = buildAnalysisPrompt({
+			searchQuery: "RTX 4090",
+			judgmentCriteria: "GPU seul",
+			listing: baseListing,
+			marketContext: null,
+		});
+		expect(system).toContain('"comparables"');
+	});
+
+	it("instructs bullet-point verdicts", () => {
+		const { system } = buildAnalysisPrompt({
+			searchQuery: "RTX 4090",
+			judgmentCriteria: "GPU seul",
+			listing: baseListing,
+			marketContext: null,
+		});
+		expect(system).toContain("bullet");
+	});
+
+	it("includes market context when provided", () => {
+		const { user } = buildAnalysisPrompt({
+			searchQuery: "RTX 4090",
+			judgmentCriteria: "GPU seul",
+			listing: baseListing,
+			marketContext: 'Comparables trouvés pour "RTX 4090" :\n- backmarket.fr: "RTX 4090 OC" → 699€',
+		});
+		expect(user).toContain("backmarket.fr");
+		expect(user).toContain("699€");
+	});
+
 	it("puts listing data in user message and calibration in system", () => {
 		const prompt = buildAnalysisPrompt({
 			searchQuery: "HDD 8-12To",
@@ -71,5 +111,17 @@ describe("buildAnalysisPrompt", () => {
 		});
 
 		expect(prompt.user).toContain("150"); // 15000 cents = 150 EUR
+	});
+});
+
+describe("buildBatchAnalysisPrompt", () => {
+	it("includes comparables field in JSON example", () => {
+		const { system } = buildBatchAnalysisPrompt({
+			searchQuery: "RTX 4090",
+			judgmentCriteria: "GPU seul",
+			items: [{ id: 1, listing: baseListing }],
+			marketContext: null,
+		});
+		expect(system).toContain('"comparables"');
 	});
 });
