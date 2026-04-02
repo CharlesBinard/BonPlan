@@ -1,6 +1,6 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
-RUN npm install -g bun@1.3.9
+RUN npm install -g bun@1.3.9 tsx
 COPY package.json bun.lock ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/ai/package.json packages/ai/
