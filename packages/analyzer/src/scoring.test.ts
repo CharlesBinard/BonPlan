@@ -122,3 +122,57 @@ describe("normalizeMarketPrices", () => {
 		expect(result).toBe(input);
 	});
 });
+
+describe("analysisResultSchema with comparables", () => {
+	const baseValid = {
+		matchesQuery: true,
+		score: 75,
+		verdict: "• Bon prix\n• Vendeur fiable",
+		marketPriceLow: 500,
+		marketPriceHigh: 700,
+		redFlags: [],
+		reasoning: "Test reasoning",
+	};
+
+	it("defaults comparables to empty array when omitted", () => {
+		const result = analysisResultSchema.safeParse(baseValid);
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.comparables).toEqual([]);
+		}
+	});
+
+	it("accepts valid comparables array", () => {
+		const result = analysisResultSchema.safeParse({
+			...baseValid,
+			comparables: [
+				{ title: "RTX 4090 OC", price: 699, source: "backmarket.fr" },
+				{ title: "RTX 4090 FE", price: 640, source: "rakuten.com", date: "2026-03-15" },
+			],
+		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.comparables).toHaveLength(2);
+			expect(result.data.comparables[0]?.price).toBe(699);
+		}
+	});
+
+	it("rounds comparable prices to integers", () => {
+		const result = analysisResultSchema.safeParse({
+			...baseValid,
+			comparables: [{ title: "Test", price: 699.5, source: "searxng" }],
+		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.comparables[0]?.price).toBe(700);
+		}
+	});
+
+	it("rejects comparables with negative price", () => {
+		const result = analysisResultSchema.safeParse({
+			...baseValid,
+			comparables: [{ title: "Test", price: -100, source: "searxng" }],
+		});
+		expect(result.success).toBe(false);
+	});
+});
