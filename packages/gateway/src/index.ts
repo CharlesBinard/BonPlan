@@ -1,11 +1,15 @@
 import { resolve } from "node:path";
-import { createLogger } from "@bonplan/shared";
+import { createLogger, runMigrations } from "@bonplan/shared";
 import { serveStatic } from "hono/bun";
 import { app } from "./app";
-import { pgClient, redis } from "./lib/db";
+import { db, pgClient, redis } from "./lib/db";
 import { cleanupWebSocket, setupWebSocket } from "./lib/ws";
 
 const logger = createLogger("gateway");
+
+// ── Run database migrations
+await runMigrations(db);
+logger.info("Database migrations applied");
 
 // ── WebSocket
 const websocket = await setupWebSocket(app);

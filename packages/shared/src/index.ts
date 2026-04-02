@@ -1,6 +1,7 @@
 export * from "./config";
 export * from "./crypto";
 export * from "./db/connection";
+export * from "./db/migrate";
 export * from "./db/redis";
 export * from "./db/schema";
 export * from "./events";
