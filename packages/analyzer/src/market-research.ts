@@ -187,7 +187,8 @@ export const buildMarketContextString = (
 
 	const bySource: Record<string, Comparable[]> = {};
 	for (const c of comparables) {
-		(bySource[c.source] ??= []).push(c);
+		if (!bySource[c.source]) bySource[c.source] = [];
+		bySource[c.source].push(c);
 	}
 
 	for (const [source, items] of Object.entries(bySource)) {

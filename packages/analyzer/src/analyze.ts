@@ -213,7 +213,17 @@ const analyzeSingle = async (
 	});
 
 	const result = normalizeMarketPrices(data);
-	await saveAnalysis(deps, listing.id, searchId, userId, result, userModel, userProvider, marketResult?.median ?? null, listing.price);
+	await saveAnalysis(
+		deps,
+		listing.id,
+		searchId,
+		userId,
+		result,
+		userModel,
+		userProvider,
+		marketResult?.median ?? null,
+		listing.price,
+	);
 	logger.info("Listing analyzed (single)", { listingId: listing.id, score: result.score });
 };
 
@@ -333,7 +343,17 @@ const analyzeBatch = async (
 			continue;
 		}
 
-		await saveAnalysis(deps, listing.id, searchId, userId, result, userModel, userProvider, marketResult?.median ?? null, listing.price);
+		await saveAnalysis(
+			deps,
+			listing.id,
+			searchId,
+			userId,
+			result,
+			userModel,
+			userProvider,
+			marketResult?.median ?? null,
+			listing.price,
+		);
 		logger.info("Listing analyzed (batch)", { listingId: listing.id, score: result.score });
 	}
 

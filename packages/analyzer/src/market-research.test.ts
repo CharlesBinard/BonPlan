@@ -4,13 +4,13 @@ import {
 	buildMarketQueries,
 	buildSiteQuery,
 	CACHE_TTL_SECONDS,
+	type Comparable,
 	computeDiscount,
 	computeMedian,
 	escapeLike,
 	extractPrice,
 	fetchInternalHistory,
 	parseSearxngComparables,
-	type Comparable,
 } from "./market-research";
 
 // ── Existing tests (preserved) ──────────────────────────────────
