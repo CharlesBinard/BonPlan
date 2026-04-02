@@ -5,7 +5,88 @@ import type Redis from "ioredis";
 
 const logger = createLogger("analyzer");
 
-export const CACHE_TTL_SECONDS = 3600; // 1 hour
+// ── Types ────────────────────────────────────────────────────────
+
+export type Comparable = {
+	title: string;
+	price: number; // cents
+	source: string; // "backmarket.fr" | "rakuten.com" | "bonplan-history" | "searxng"
+	date?: string; // ISO date
+};
+
+export type MarketResearchResult = {
+	context: string; // Formatted text for AI prompt
+	comparables: Comparable[]; // Structured data for storage (cents)
+	median: number | null; // Median price in cents
+};
+
+// ── Utilities ────────────────────────────────────────────────────
+
+/** Compute the median of an array of numbers. Returns null for empty arrays. */
+export const computeMedian = (values: number[]): number | null => {
+	if (values.length === 0) return null;
+	const sorted = [...values].sort((a, b) => a - b);
+	const mid = Math.floor(sorted.length / 2);
+	if (sorted.length % 2 !== 0) return sorted[mid]!;
+	return Math.round((sorted[mid - 1]! + sorted[mid]!) / 2);
+};
+
+/**
+ * Extract the first EUR price from a text string. Returns price in cents or null.
+ * Handles European formats: 699€, 1 299€, 1.299€, 1.299,00€, 12,50€, 12.50€
+ */
+export const extractPrice = (text: string): number | null => {
+	const match = text.match(/(\d[\d\s.]*(?:,\d{1,2})?)\s*€/);
+	if (!match?.[1]) return null;
+
+	let raw = match[1].replace(/\s/g, "");
+
+	if (raw.includes(",")) {
+		// Comma present → dots are thousands separators: "1.299,00" → "1299.00"
+		raw = raw.replace(/\./g, "").replace(",", ".");
+	} else if (/^\d{1,3}(?:\.\d{3})+$/.test(raw)) {
+		// Dot-separated groups of 3 = thousands separator: "1.299" → "1299"
+		raw = raw.replace(/\./g, "");
+	}
+	// Otherwise dot is decimal: "12.50" stays "12.50"
+
+	const euros = Number.parseFloat(raw);
+	return Number.isNaN(euros) ? null : Math.round(euros * 100);
+};
+
+/**
+ * Compute discount percentage. Positive = below market, negative = above market.
+ * Returns null if median is unavailable or zero.
+ */
+export const computeDiscount = (listingPrice: number, marketMedian: number | null): number | null => {
+	if (marketMedian === null || marketMedian <= 0) return null;
+	return Math.round((1 - listingPrice / marketMedian) * 100);
+};
+
+/** Parse SearXNG results into structured Comparables by extracting prices. */
+export const parseSearxngComparables = (
+	results: Array<{ title: string; content: string }>,
+	source: string,
+): Comparable[] => {
+	const comparables: Comparable[] = [];
+	for (const r of results) {
+		const price = extractPrice(r.content) ?? extractPrice(r.title);
+		if (price !== null) {
+			comparables.push({ title: r.title, price, source });
+		}
+	}
+	return comparables;
+};
+
+/** Build a SearXNG query scoped to a specific site. */
+export const buildSiteQuery = (query: string, site: string): string => {
+	return `${query} site:${site}`;
+};
+
+/** Escape LIKE/ILIKE special characters to prevent wildcard injection. */
+export const escapeLike = (s: string): string => s.replace(/[%_\\]/g, "\\$&");
+
+export const CACHE_TTL_SECONDS = 86400; // 24 hours
 const CACHE_PREFIX = "market-research:";
 
 /** Build multiple query variants for better price coverage */
