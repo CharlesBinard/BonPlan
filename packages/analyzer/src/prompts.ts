@@ -114,6 +114,10 @@ Example 7 — ACCESSORY, rejected:
 Query: "5950x". Title: "Ventirad Noctua NH-D15 compatible AM4". Price: 55 EUR.
 → ACCESSORY. matchesQuery=false. Score: 5.
 
+**Verdict format:** Le verdict DOIT être en 2-3 bullet points (• ligne1\n• ligne2), PAS un paragraphe. Chaque point doit être concis (< 15 mots).
+
+**Comparables:** Retourne les 3-5 prix comparables les plus pertinents parmi les données de recherche marché fournies. Chaque comparable a: title (string), price (number en EUR), source (string). Si aucune donnée marché n'est fournie, retourne un tableau vide [].
+
 When analyzing a SINGLE listing, respond with a JSON object.
 When analyzing MULTIPLE listings, respond with a JSON array of objects (one per listing, in order).
 
@@ -126,10 +130,11 @@ Each result object must have these fields (put reasoning FIRST):
   "listingType": "STANDALONE" | "SYSTEM" | "BUNDLE" | "ACCESSORY" | "IRRELEVANT",
   "matchesQuery": true/false,
   "score": 0-100,
-  "verdict": "Verdict court en 1-2 phrases en français",
+  "verdict": "• Point clé 1\\n• Point clé 2\\n• Point clé 3",
   "marketPriceLow": number (EUR) or null,
   "marketPriceHigh": number (EUR) or null,
-  "redFlags": [] or ["Annonce peu détaillée", "Pas de photos"]
+  "redFlags": [] or ["Annonce peu détaillée", "Pas de photos"],
+  "comparables": [{"title": "Produit similaire", "price": 650, "source": "backmarket.fr"}]
 }
 
 Respond with ONLY valid JSON (no markdown, no explanation).`;
