@@ -95,8 +95,11 @@ services:
     image: searxng/searxng:latest
     environment:
       SEARXNG_SECRET: ${SEARXNG_SECRET_KEY:?}
+      SEARXNG_SETTINGS_SERVER_LIMITER: "false"
+      SEARXNG_SETTINGS_SERVER_IMAGE_PROXY: "false"
+      SEARXNG_SETTINGS_SERVER_METHOD: GET
     volumes:
-      - ./config/searxng/settings.yml:/etc/searxng/settings.yml
+      - searxng-data:/etc/searxng
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/ >/dev/null 2>&1 || exit 1"]
@@ -175,7 +178,7 @@ services:
       redis:
         condition: service_healthy
       searxng:
-        condition: service_healthy
+        condition: service_started
     restart: unless-stopped
     deploy:
       resources:
@@ -256,3 +259,4 @@ volumes:
   redis-data:
   browser-profile:
   gluetun-data:
+  searxng-data:
