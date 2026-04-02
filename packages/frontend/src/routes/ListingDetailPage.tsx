@@ -200,10 +200,9 @@ const ListingDetailPage = () => {
 						Points d'attention
 					</h2>
 					<div className="flex flex-wrap gap-1.5">
-						{analysis.redFlags.map((flag, i) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: red flags are static strings without stable IDs
+						{analysis.redFlags.map((flag) => (
 							<span
-								key={i}
+								key={flag}
 								className="inline-flex items-center gap-1 rounded-full border border-red-200/60 px-2.5 py-0.5 text-xs text-red-600 dark:border-red-800/40 dark:text-red-300"
 							>
 								{flag}

@@ -2,7 +2,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { ProviderType } from "@bonplan/shared/ai-models";
-import { APICallError, Output, generateText } from "ai";
+import { APICallError, generateText, Output } from "ai";
 import { createMinimax } from "vercel-minimax-ai-provider";
 import type { z } from "zod";
 import { AiAuthError, AiQuotaError, AiRateLimitError } from "./errors";
