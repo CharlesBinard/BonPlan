@@ -64,15 +64,19 @@ type ListingRow = typeof listings.$inferSelect;
 
 const saveAnalysis = async (
 	deps: AnalyzeDeps,
-	listingId: string,
-	searchId: string,
-	userId: string,
-	data: AnalysisResult,
-	userModel: string,
-	userProvider: string,
-	marketMedian: number | null,
-	listingPrice: number,
+	params: {
+		listingId: string;
+		searchId: string;
+		userId: string;
+		data: AnalysisResult;
+		userModel: string;
+		userProvider: string;
+		marketMedian: number | null;
+		listingPrice: number;
+	},
 ): Promise<void> => {
+	const { listingId, searchId, userId, data, userModel, userProvider, marketMedian, listingPrice } = params;
+
 	const marketPriceLowCents = data.marketPriceLow !== null ? data.marketPriceLow * 100 : null;
 	const marketPriceHighCents = data.marketPriceHigh !== null ? data.marketPriceHigh * 100 : null;
 
@@ -81,10 +85,7 @@ const saveAnalysis = async (
 
 	const discount = computeDiscount(listingPrice, marketMedian);
 
-	const values = {
-		listingId,
-		searchId,
-		userId,
+	const payload = {
 		matchesQuery: data.matchesQuery,
 		listingType: data.listingType ?? null,
 		score: data.score,
@@ -102,10 +103,10 @@ const saveAnalysis = async (
 
 	const [upserted] = await deps.db
 		.insert(analyses)
-		.values(values)
+		.values({ listingId, searchId, userId, ...payload })
 		.onConflictDoUpdate({
 			target: [analyses.listingId, analyses.searchId],
-			set: { ...values, updatedAt: new Date() },
+			set: { ...payload, updatedAt: new Date() },
 		})
 		.returning({ id: analyses.id });
 
@@ -213,17 +214,16 @@ const analyzeSingle = async (
 	});
 
 	const result = normalizeMarketPrices(data);
-	await saveAnalysis(
-		deps,
-		listing.id,
+	await saveAnalysis(deps, {
+		listingId: listing.id,
 		searchId,
 		userId,
-		result,
+		data: result,
 		userModel,
 		userProvider,
-		marketResult?.median ?? null,
-		listing.price,
-	);
+		marketMedian: marketResult?.median ?? null,
+		listingPrice: listing.price,
+	});
 	logger.info("Listing analyzed (single)", { listingId: listing.id, score: result.score });
 };
 
@@ -343,17 +343,16 @@ const analyzeBatch = async (
 			continue;
 		}
 
-		await saveAnalysis(
-			deps,
-			listing.id,
+		await saveAnalysis(deps, {
+			listingId: listing.id,
 			searchId,
 			userId,
-			result,
+			data: result,
 			userModel,
 			userProvider,
-			marketResult?.median ?? null,
-			listing.price,
-		);
+			marketMedian: marketResult?.median ?? null,
+			listingPrice: listing.price,
+		});
 		logger.info("Listing analyzed (batch)", { listingId: listing.id, score: result.score });
 	}
 
