@@ -2,7 +2,8 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { ProviderType } from "@bonplan/shared/ai-models";
-import { APICallError, generateObject, generateText } from "ai";
+import { APICallError, Output, generateText } from "ai";
+import { createMinimax } from "vercel-minimax-ai-provider";
 import type { z } from "zod";
 import { AiAuthError, AiQuotaError, AiRateLimitError } from "./errors";
 
@@ -14,16 +15,15 @@ const createModel = (providerType: ProviderType, apiKey: string, modelId: string
 		}
 		case ProviderType.OpenAI: {
 			const openai = createOpenAI({ apiKey });
-			return openai(modelId);
+			return openai.chat(modelId);
 		}
 		case ProviderType.Gemini: {
 			const google = createGoogleGenerativeAI({ apiKey });
 			return google(modelId);
 		}
 		case ProviderType.Minimax: {
-			// Minimax is OpenAI-compatible
-			const openai = createOpenAI({ apiKey, baseURL: "https://api.minimax.io/v1" });
-			return openai(modelId);
+			const minimax = createMinimax({ apiKey });
+			return minimax(modelId);
 		}
 		default:
 			throw new Error(`Unknown provider: ${providerType satisfies never}`);
@@ -70,16 +70,20 @@ export const generateStructured = async <SCHEMA extends z.ZodType>(params: {
 	const model = createModel(params.providerType, params.apiKey, params.model);
 
 	try {
-		const result = await generateObject({
+		const result = await generateText({
 			model,
-			schema: params.schema,
+			output: Output.object({ schema: params.schema }),
 			system: params.system,
 			prompt: params.prompt,
 			maxOutputTokens: params.maxOutputTokens,
 		});
 
+		if (!result.output) {
+			throw new Error("No object generated: model did not produce structured output");
+		}
+
 		return {
-			data: result.object as z.infer<SCHEMA>,
+			data: result.output as z.infer<SCHEMA>,
 			usage: {
 				inputTokens: result.usage.inputTokens ?? 0,
 				outputTokens: result.usage.outputTokens ?? 0,

@@ -194,20 +194,22 @@ const ListingDetailPage = () => {
 
 			{/* Red flags */}
 			{analysis?.redFlags && analysis.redFlags.length > 0 && (
-				<div className="flex flex-col gap-2 rounded-xl border border-red-200 bg-red-50/50 p-4 dark:border-red-900/30 dark:bg-red-950/20">
-					<h2 className="flex items-center gap-1.5 text-sm font-semibold text-red-600 dark:text-red-400">
-						<AlertTriangleIcon className="size-4" />
+				<div className="flex flex-col gap-1.5">
+					<h2 className="flex items-center gap-1.5 text-xs font-medium text-red-500 dark:text-red-400">
+						<AlertTriangleIcon className="size-3.5" />
 						Points d'attention
 					</h2>
-					<ul className="flex flex-col gap-2">
+					<div className="flex flex-wrap gap-1.5">
 						{analysis.redFlags.map((flag, i) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: red flags are static strings without stable IDs
-							<li key={i} className="flex items-start gap-2.5 text-sm">
-								<AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0 text-red-500 dark:text-red-400" />
-								<span className="text-red-900 dark:text-red-200">{flag}</span>
-							</li>
+							<span
+								key={i}
+								className="inline-flex items-center gap-1 rounded-full border border-red-200/60 px-2.5 py-0.5 text-xs text-red-600 dark:border-red-800/40 dark:text-red-300"
+							>
+								{flag}
+							</span>
 						))}
-					</ul>
+					</div>
 				</div>
 			)}
 

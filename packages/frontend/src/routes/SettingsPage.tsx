@@ -144,6 +144,7 @@ const AiConfigTab = () => {
 	const [apiKey, setApiKey] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
+	const [editingKey, setEditingKey] = useState(false);
 
 	const initializedRef = useRef(false);
 	useEffect(() => {
@@ -159,7 +160,7 @@ const AiConfigTab = () => {
 	const savedProvider = settings.aiProvider;
 	const providerChanged = selectedProvider !== savedProvider;
 	const models = AI_MODELS[selectedProvider as ProviderType] ?? [];
-	const needsApiKey = providerChanged || !settings.hasApiKey;
+	const needsApiKey = providerChanged || !settings.hasApiKey || editingKey;
 
 	const handleProviderChange = (value: string) => {
 		setSelectedProvider(value);
@@ -192,6 +193,7 @@ const AiConfigTab = () => {
 			await updateSettings.mutateAsync({ data: body });
 			setApiKey("");
 			setPassword("");
+			setEditingKey(false);
 			initializedRef.current = false;
 		} catch (err) {
 			if (err instanceof ApiError) {
@@ -287,6 +289,9 @@ const AiConfigTab = () => {
 							Clé configurée
 						</Badge>
 						<span className="text-xs text-muted-foreground">{PROVIDER_LABELS[savedProvider as ProviderType]}</span>
+						<Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={() => setEditingKey(true)}>
+							Modifier
+						</Button>
 					</div>
 				)}
 

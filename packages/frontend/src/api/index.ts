@@ -22,6 +22,7 @@ import type {
 } from "./generated/bonPlanAPI";
 // ─── Generated query option helpers (for custom wrappers) ───────────
 import {
+	getApiSearchesIdListings,
 	getDeleteApiFavoritesListingIdMutationOptions,
 	getDeleteApiSearchesIdMutationOptions,
 	getGetApiFavoritesQueryOptions,
@@ -114,6 +115,12 @@ export const useListings = (searchId: string, params?: { sort?: string; minScore
 	);
 	return useInfiniteQuery({
 		...queryOptions,
+		queryFn: ({ signal, pageParam }) =>
+			getApiSearchesIdListings(
+				searchId,
+				{ ...queryParams, cursor: pageParam || undefined } as Parameters<typeof getApiSearchesIdListings>[1],
+				{ signal },
+			),
 		select: (data) => ({
 			...data,
 			pages: data.pages.map((page) => ok<getApiSearchesIdListingsResponseSuccess>(page).data),
