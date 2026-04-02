@@ -28,8 +28,13 @@ export const computeMedian = (values: number[]): number | null => {
 	if (values.length === 0) return null;
 	const sorted = [...values].sort((a, b) => a - b);
 	const mid = Math.floor(sorted.length / 2);
-	if (sorted.length % 2 !== 0) return sorted[mid]!;
-	return Math.round((sorted[mid - 1]! + sorted[mid]!) / 2);
+	if (sorted.length % 2 !== 0) {
+		const value = sorted[mid];
+		return value !== undefined ? value : null;
+	}
+	const a = sorted[mid - 1];
+	const b = sorted[mid];
+	return a !== undefined && b !== undefined ? Math.round((a + b) / 2) : null;
 };
 
 /**
@@ -187,8 +192,12 @@ export const buildMarketContextString = (
 
 	const bySource: Record<string, Comparable[]> = {};
 	for (const c of comparables) {
-		const list = bySource[c.source] ?? (bySource[c.source] = []);
-		list.push(c);
+		const list = bySource[c.source];
+		if (list) {
+			list.push(c);
+		} else {
+			bySource[c.source] = [c];
+		}
 	}
 
 	for (const [source, items] of Object.entries(bySource)) {
@@ -224,7 +233,13 @@ export const fetchMarketContext = async (
 		if (cached) {
 			try {
 				const parsed = JSON.parse(cached);
-				if (parsed && typeof parsed === "object" && "context" in parsed && "comparables" in parsed) {
+				if (
+					parsed &&
+					typeof parsed === "object" &&
+					"context" in parsed &&
+					"comparables" in parsed &&
+					Array.isArray(parsed.comparables)
+				) {
 					logger.info("Market research cache hit", { query: searchQuery });
 					return parsed as MarketResearchResult;
 				}
@@ -293,10 +308,13 @@ export const fetchMarketContext = async (
 
 		if (allComparables.length === 0) return null;
 
-		const median = computeMedian(allComparables.map((c) => c.price));
-		const context = buildMarketContextString(searchQuery, allComparables, median);
+		// Bound total comparables to prevent oversized JSONB storage
+		const bounded = allComparables.slice(0, 50);
 
-		const result: MarketResearchResult = { context, comparables: allComparables, median };
+		const median = computeMedian(bounded.map((c) => c.price));
+		const context = buildMarketContextString(searchQuery, bounded, median);
+
+		const result: MarketResearchResult = { context, comparables: bounded, median };
 
 		// Cache for 24 hours
 		await redis.set(cacheKey, JSON.stringify(result), "EX", CACHE_TTL_SECONDS);
