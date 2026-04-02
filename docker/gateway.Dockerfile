@@ -3,9 +3,13 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/ai/package.json packages/ai/
-COPY packages/gateway/package.json packages/gateway/
+COPY packages/analyzer/package.json packages/analyzer/
 COPY packages/frontend/package.json packages/frontend/
-RUN bun install --frozen-lockfile --production
+COPY packages/gateway/package.json packages/gateway/
+COPY packages/notifier/package.json packages/notifier/
+COPY packages/orchestrator/package.json packages/orchestrator/
+COPY packages/scraper/package.json packages/scraper/
+RUN bun install --frozen-lockfile
 
 FROM deps AS frontend-build
 COPY tsconfig.base.json ./
