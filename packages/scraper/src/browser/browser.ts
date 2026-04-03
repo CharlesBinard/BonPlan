@@ -38,7 +38,7 @@ export const getOrCreateConnection = async (browserWsUrl: string): Promise<Brows
 			const httpBase = browserWsUrl.replace(/^ws:\/\//, "http://").replace(/^wss:\/\//, "https://");
 			let wsEndpoint = browserWsUrl;
 			try {
-				const res = await fetch(`${httpBase}/json/version`, { signal: AbortSignal.timeout(10000) });
+				const res = await fetch(`${httpBase}/json/version`, { signal: AbortSignal.timeout(15000) });
 				const json = (await res.json()) as { webSocketDebuggerUrl?: string };
 				if (json.webSocketDebuggerUrl) {
 					// Real Chrome reports 0.0.0.0 as the host; rewrite to the configured host
@@ -46,8 +46,9 @@ export const getOrCreateConnection = async (browserWsUrl: string): Promise<Brows
 					const configuredHost = new URL(browserWsUrl).host;
 					wsEndpoint = json.webSocketDebuggerUrl.replace(/^ws:\/\/[^/]+/, `ws://${configuredHost}`);
 				}
-			} catch {
-				logger.warn("Could not fetch /json/version, using configured URL");
+			} catch (err) {
+				const errMsg = err instanceof Error ? err.message : String(err);
+				logger.warn("Could not fetch /json/version, using configured URL", { error: errMsg, url: `${httpBase}/json/version` });
 			}
 
 			logger.info("Connecting to browser via CDP", { wsEndpoint });
