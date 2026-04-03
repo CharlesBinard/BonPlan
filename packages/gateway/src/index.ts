@@ -8,7 +8,7 @@ import { cleanupWebSocket, setupWebSocket } from "./lib/ws";
 const logger = createLogger("gateway");
 
 // ── Run database migrations
-await runMigrations(db);
+await runMigrations(db, resolve(process.cwd(), "packages/shared/drizzle"));
 logger.info("Database migrations applied");
 
 // ── WebSocket
