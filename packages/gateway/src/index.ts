@@ -18,10 +18,12 @@ const websocket = await setupWebSocket(app);
 // ── Static frontend (must be after all API routes)
 const frontendDist = resolve(import.meta.dir, "../../frontend/dist");
 
-// Serve frontend static files
-app.use("/*", serveStatic({ root: frontendDist }));
-// SPA fallback — serve index.html for client-side routes
-app.get("/*", serveStatic({ path: resolve(frontendDist, "index.html") }));
+// Serve frontend static files, fall back to index.html for SPA routes
+app.use(
+	"/*",
+	serveStatic({ root: frontendDist }),
+	serveStatic({ path: resolve(frontendDist, "index.html") }),
+);
 
 // ── Start server
 const port = Number(process.env.PORT ?? 3000);
