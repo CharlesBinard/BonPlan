@@ -6,6 +6,10 @@ on:
     types: [completed]
     branches: [main]
 
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: deploy
@@ -14,5 +18,17 @@ jobs:
     steps:
       - name: Trigger Coolify deployment
         run: |
-          curl -f -X POST "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt/3"
+            if curl -f -X POST "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
+              -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"; then
+              echo "Deployment triggered successfully"
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Retrying in 10s..."
+              sleep 10
+            fi
+          done
+          echo "All 3 attempts failed"
+          exit 1

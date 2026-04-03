@@ -1,3 +1,10 @@
+x-common-env: &common-env
+  NODE_ENV: production
+
+x-db-env: &db-env
+  DATABASE_URL: postgresql://bonplan:${POSTGRES_PASSWORD:?}@postgres:5432/bonplan
+  REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+
 services:
   # ── Infrastructure ──
   postgres:
@@ -14,6 +21,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+      start_period: 15s
     deploy:
       resources:
         limits:
@@ -21,7 +29,7 @@ services:
           cpus: "1"
 
   redis:
-    image: redis:alpine
+    image: redis:7-alpine
     command: redis-server --requirepass ${REDIS_PASSWORD:?}
     volumes:
       - redis-data:/data
@@ -33,6 +41,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+      start_period: 5s
     deploy:
       resources:
         limits:
@@ -40,7 +49,7 @@ services:
           cpus: "0.5"
 
   gluetun:
-    image: qmcgaw/gluetun:latest
+    image: qmcgaw/gluetun:v3
     cap_add:
       - NET_ADMIN
     devices:
@@ -53,11 +62,11 @@ services:
       FIREWALL: "on"
       FIREWALL_INPUT_PORTS: "9222"
       FIREWALL_OUTBOUND_SUBNETS: "172.16.0.0/12,192.168.0.0/16"
-      DOT: "on"
+      DOT: "off"
     volumes:
       - gluetun-data:/gluetun
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- https://api.ipify.org 2>/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/v1/publicip/ip 2>/dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -72,12 +81,12 @@ services:
   chrome-stealth:
     build: ./docker/chrome-stealth
     network_mode: "service:gluetun"
-    shm_size: 2g
+    shm_size: 1g
     depends_on:
       gluetun:
         condition: service_healthy
-    volumes:
-      - browser-profile:/data/browser-profile
+    tmpfs:
+      - /data/browser-profile
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9222/json/version || exit 1"]
       interval: 15s
@@ -88,7 +97,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4g
+          memory: 2g
           cpus: "2"
 
   searxng:
@@ -115,7 +124,7 @@ services:
 
   # ── Cloudflare Tunnel ──
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2024.12.2
     command: tunnel run
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?}
@@ -135,15 +144,13 @@ services:
       context: .
       dockerfile: docker/gateway.Dockerfile
     environment:
-      DATABASE_URL: postgresql://bonplan:${POSTGRES_PASSWORD:?}@postgres:5432/bonplan
-      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+      <<: [*common-env, *db-env]
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?}
       GATEWAY_URL: http://gateway:3000
       ADMIN_USER_ID: ${ADMIN_USER_ID:-}
       DISCORD_SERVICE_TOKEN: ${DISCORD_SERVICE_TOKEN:-}
       TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-}
-      NODE_ENV: production
     depends_on:
       postgres:
         condition: service_healthy
@@ -155,7 +162,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 20s
     deploy:
       resources:
         limits:
@@ -167,18 +174,16 @@ services:
       context: .
       dockerfile: docker/orchestrator.Dockerfile
     environment:
-      DATABASE_URL: postgresql://bonplan:${POSTGRES_PASSWORD:?}@postgres:5432/bonplan
-      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+      <<: [*common-env, *db-env]
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?}
       SEARXNG_URL: http://searxng:8080
-      NODE_ENV: production
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       searxng:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     deploy:
       resources:
@@ -191,10 +196,8 @@ services:
       context: .
       dockerfile: docker/scraper.Dockerfile
     environment:
-      DATABASE_URL: postgresql://bonplan:${POSTGRES_PASSWORD:?}@postgres:5432/bonplan
-      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+      <<: [*common-env, *db-env]
       BROWSER_WS_URL: ws://gluetun:9222
-      NODE_ENV: production
     depends_on:
       postgres:
         condition: service_healthy
@@ -214,10 +217,8 @@ services:
       context: .
       dockerfile: docker/analyzer.Dockerfile
     environment:
-      DATABASE_URL: postgresql://bonplan:${POSTGRES_PASSWORD:?}@postgres:5432/bonplan
-      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+      <<: [*common-env, *db-env]
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?}
-      NODE_ENV: production
     depends_on:
       postgres:
         condition: service_healthy
@@ -235,13 +236,11 @@ services:
       context: .
       dockerfile: docker/notifier.Dockerfile
     environment:
-      DATABASE_URL: postgresql://bonplan:${POSTGRES_PASSWORD:?}@postgres:5432/bonplan
-      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+      <<: [*common-env, *db-env]
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?}
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DISCORD_SERVICE_TOKEN: ${DISCORD_SERVICE_TOKEN:-}
       GATEWAY_URL: http://gateway:3000
-      NODE_ENV: production
     depends_on:
       postgres:
         condition: service_healthy
@@ -257,6 +256,5 @@ services:
 volumes:
   postgres-data:
   redis-data:
-  browser-profile:
   gluetun-data:
   searxng-data:

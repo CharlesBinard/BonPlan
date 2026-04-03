@@ -1,0 +1,41 @@
+# Dependencies - reinstalled inside the container via bun install
+node_modules/
+
+# Git
+.git/
+.gitignore
+
+# Build artifacts
+dist/
+*.tsbuildinfo
+.turbo/
+coverage/
+
+# Environment files (secrets must not leak into images)
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# CI / docs / config not needed in builds
+.github/
+.claude/
+docs/
+config/
+LICENSE
+README.md
+mprocs.yaml
+mprocs.log
+biome.json
+turbo.json
+
+# Docker files (avoid recursive context)
+docker-compose*.yml
+
+# Scraper snapshots
+parser-snapshots/
