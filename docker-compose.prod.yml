@@ -29,7 +29,7 @@ services:
           cpus: "1"
 
   redis:
-    image: redis:7-alpine
+    image: redis:alpine
     command: redis-server --requirepass ${REDIS_PASSWORD:?}
     volumes:
       - redis-data:/data
