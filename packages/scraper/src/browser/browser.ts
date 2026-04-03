@@ -34,25 +34,10 @@ export const getOrCreateConnection = async (browserWsUrl: string): Promise<Brows
 				return { browser: cachedBrowser, context: cachedContext as BrowserContext, isNew: false };
 			}
 
-			// Resolve the CDP endpoint via /json/version
-			const httpBase = browserWsUrl.replace(/^ws:\/\//, "http://").replace(/^wss:\/\//, "https://");
-			let wsEndpoint = browserWsUrl;
-			try {
-				const res = await fetch(`${httpBase}/json/version`, { signal: AbortSignal.timeout(15000) });
-				const json = (await res.json()) as { webSocketDebuggerUrl?: string };
-				if (json.webSocketDebuggerUrl) {
-					// Real Chrome reports 0.0.0.0 as the host; rewrite to the configured host
-					// so the connection works from outside the container (e.g. localhost:9222).
-					const configuredHost = new URL(browserWsUrl).host;
-					wsEndpoint = json.webSocketDebuggerUrl.replace(/^ws:\/\/[^/]+/, `ws://${configuredHost}`);
-				}
-			} catch (err) {
-				const errMsg = err instanceof Error ? err.message : String(err);
-				logger.warn("Could not fetch /json/version, using configured URL", { error: errMsg, url: `${httpBase}/json/version` });
-			}
-
-			logger.info("Connecting to browser via CDP", { wsEndpoint });
-			const browser = await chromium.connectOverCDP(wsEndpoint);
+			// connectOverCDP accepts an HTTP endpoint and resolves the WebSocket URL internally
+			const cdpEndpoint = browserWsUrl.replace(/^ws:\/\//, "http://").replace(/^wss:\/\//, "https://");
+			logger.info("Connecting to browser via CDP", { cdpEndpoint });
+			const browser = await chromium.connectOverCDP(cdpEndpoint);
 
 			const context =
 				browser.contexts()[0] ??
