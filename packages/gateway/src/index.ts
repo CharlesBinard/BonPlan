@@ -22,7 +22,7 @@ const frontendDist = resolve(import.meta.dir, "../../frontend/dist");
 app.use(
 	"/*",
 	serveStatic({ root: frontendDist }),
-	serveStatic({ path: resolve(frontendDist, "index.html") }),
+	serveStatic({ root: frontendDist, path: "index.html" }),
 );
 
 // ── Start server
