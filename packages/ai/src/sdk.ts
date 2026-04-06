@@ -66,6 +66,7 @@ export const generateStructured = async <SCHEMA extends z.ZodType>(params: {
 	system: string;
 	prompt: string;
 	maxOutputTokens?: number;
+	temperature?: number;
 }): Promise<{ data: z.infer<SCHEMA>; usage?: { inputTokens: number; outputTokens: number } }> => {
 	const model = createModel(params.providerType, params.apiKey, params.model);
 
@@ -76,6 +77,7 @@ export const generateStructured = async <SCHEMA extends z.ZodType>(params: {
 			system: params.system,
 			prompt: params.prompt,
 			maxOutputTokens: params.maxOutputTokens,
+			temperature: params.temperature,
 		});
 
 		if (!result.output) {
@@ -101,6 +103,7 @@ export const generateFreeText = async (params: {
 	system: string;
 	prompt: string;
 	maxOutputTokens?: number;
+	temperature?: number;
 }): Promise<{ text: string; usage?: { inputTokens: number; outputTokens: number } }> => {
 	const model = createModel(params.providerType, params.apiKey, params.model);
 
@@ -110,6 +113,7 @@ export const generateFreeText = async (params: {
 			system: params.system,
 			prompt: params.prompt,
 			maxOutputTokens: params.maxOutputTokens,
+			temperature: params.temperature,
 		});
 
 		return {
@@ -133,6 +137,7 @@ export const generateStructuredWithImages = async <SCHEMA extends z.ZodType>(par
 	prompt: string;
 	imageUrls: string[];
 	maxOutputTokens?: number;
+	temperature?: number;
 }): Promise<{ data: z.infer<SCHEMA>; usage?: { inputTokens: number; outputTokens: number } }> => {
 	const model = createModel(params.providerType, params.apiKey, params.model);
 
@@ -148,6 +153,7 @@ export const generateStructuredWithImages = async <SCHEMA extends z.ZodType>(par
 			system: params.system,
 			messages: [{ role: "user", content }],
 			maxOutputTokens: params.maxOutputTokens,
+			temperature: params.temperature,
 		});
 
 		if (!result.output) {
