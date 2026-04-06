@@ -57,6 +57,13 @@
       "when": 1775517674934,
       "tag": "0007_sloppy_trauma",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775517964282,
+      "tag": "0008_true_vampiro",
+      "breakpoints": true
     }
   ]
 }

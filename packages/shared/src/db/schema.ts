@@ -36,6 +36,8 @@ export const users = pgTable(
 		aiApiKeyVersion: integer("ai_api_key_version"),
 		aiProvider: text("ai_provider").notNull().default("claude"),
 		aiModel: text("ai_model"),
+		defaultWebhookUrl: text("default_webhook_url"),
+		defaultMinScore: integer("default_min_score"),
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	},
