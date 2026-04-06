@@ -154,6 +154,25 @@ export const setupWebSocket = async (app: Hono<any>): Promise<typeof websocket> 
 	subs.push(
 		await subscribe(
 			wsRedis,
+			Stream.ImageAnalysisComplete,
+			"gateway-ws",
+			`gw-${process.pid}`,
+			async (payload) => {
+				sendToUser(payload.userId, {
+					type: "image.analysis.complete",
+					searchId: payload.searchId,
+					listingId: payload.listingId,
+					originalScore: payload.originalScore,
+					adjustedScore: payload.adjustedScore,
+				});
+			},
+			{ logger, serviceName: "gateway-ws" },
+		),
+	);
+
+	subs.push(
+		await subscribe(
+			wsRedis,
 			Stream.NotificationSent,
 			"gateway-ws",
 			`gw-${process.pid}`,
