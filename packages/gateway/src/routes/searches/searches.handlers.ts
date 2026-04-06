@@ -37,12 +37,25 @@ searchRoutes.openapi(createSearchRoute, async (c) => {
 
 	// API key gate
 	const [user] = await db
-		.select({ aiApiKeyEncrypted: users.aiApiKeyEncrypted })
+		.select({
+			aiApiKeyEncrypted: users.aiApiKeyEncrypted,
+			aiProvider: users.aiProvider,
+			aiModel: users.aiModel,
+		})
 		.from(users)
 		.where(eq(users.id, userId));
 
 	if (!user?.aiApiKeyEncrypted) {
 		return c.json({ error: "AI API key required. Please configure your API key in settings." }, 403);
+	}
+
+	if (body.analyzeImages) {
+		const { modelSupportsVision, getDefaultModel } = await import("@bonplan/shared/ai-models");
+		const provider = (user.aiProvider ?? "claude") as import("@bonplan/shared/ai-models").ProviderType;
+		const model = user.aiModel ?? getDefaultModel(provider);
+		if (!modelSupportsVision(provider, model)) {
+			return c.json({ error: "Le modèle AI sélectionné ne supporte pas l'analyse d'images." }, 400);
+		}
 	}
 
 	const [search] = await db
@@ -61,6 +74,7 @@ searchRoutes.openapi(createSearchRoute, async (c) => {
 			discordChannelId: body.discordChannelId ?? null,
 			minScore: body.minScore,
 			allowBundles: body.allowBundles,
+			analyzeImages: body.analyzeImages,
 		})
 		.returning();
 

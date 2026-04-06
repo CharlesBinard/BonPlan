@@ -30,6 +30,7 @@ export const searchResponseSchema = z.object({
 	discordChannelId: z.string().nullable(),
 	minScore: z.number().int(),
 	allowBundles: z.boolean(),
+	analyzeImages: z.boolean(),
 	lastScrapedAt: z.string().nullable(),
 	lastError: z.string().nullable(),
 	blockedUntil: z.string().nullable(),
@@ -83,6 +84,15 @@ export const analysisResponseSchema = z.object({
 		.nullable(),
 	marketMedian: z.number().int().nullable(),
 	discount: z.number().int().nullable(),
+	imageAnalysis: z
+		.object({
+			findings: z.array(z.string()),
+			condition: z.string(),
+			scoreAdjustment: z.number(),
+			originalScore: z.number(),
+			modelUsed: z.string(),
+		})
+		.nullable(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
 });

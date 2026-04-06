@@ -20,6 +20,7 @@ export const createSearchSchema = z
 		discordChannelId: z.string().optional().nullable(),
 		minScore: z.number().int().min(0).max(100).default(70),
 		allowBundles: z.boolean().default(false),
+		analyzeImages: z.boolean().default(false),
 	})
 	.refine((data) => (data.latitude == null) === (data.longitude == null), {
 		message: "latitude and longitude must both be provided or both be null",
