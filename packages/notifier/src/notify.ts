@@ -4,7 +4,6 @@ import type { Config } from "@bonplan/shared";
 import {
 	analyses,
 	createLogger,
-	discordLinks,
 	listings,
 	notifications,
 	publish,
@@ -12,10 +11,8 @@ import {
 	searches,
 	subscribe,
 } from "@bonplan/shared";
-import type { EmbedBuilder } from "discord.js";
 import { and, eq, sql } from "drizzle-orm";
 import type Redis from "ioredis";
-import { buildListingEmbed } from "./discord/embed";
 import type { WebhookPayload } from "./webhook/webhook";
 import { sendWebhook } from "./webhook/webhook";
 
@@ -23,16 +20,10 @@ const logger = createLogger("notifier");
 
 type Db = ReturnType<typeof import("@bonplan/shared")["createDb"]>["db"];
 
-type DiscordSender = {
-	sendToChannel: (channelId: string, embed: EmbedBuilder) => Promise<void>;
-	sendDm: (discordUserId: string, embed: EmbedBuilder) => Promise<void>;
-};
-
 type NotifyDeps = {
 	db: Db;
 	redis: Redis;
 	config: Config;
-	discord: DiscordSender | null;
 };
 
 const processNotification = async (
@@ -68,7 +59,7 @@ const processNotification = async (
 	if (!listing) return;
 	const [analysis] = await db.select().from(analyses).where(eq(analyses.id, analysisId));
 
-	// Build payload (reused for webhook + Discord)
+	// Build payload
 	const payload: WebhookPayload = {
 		title: listing.title,
 		price: listing.price,
@@ -98,46 +89,12 @@ const processNotification = async (
 			return { status: "sent" as const, error: null };
 		});
 	}
-
-	// ── Discord ────────────────────────────────────────────────────
-	if (search.notifyDiscord && deps.discord) {
-		const discord = deps.discord;
-		await sendToChannel(deps, "discord", analysisId, searchId, userId, async () => {
-			const embed = buildListingEmbed({
-				title: listing.title,
-				price: listing.price,
-				score,
-				verdict,
-				url: listing.url,
-				image: listing.images[0] ?? null,
-				location: listing.location,
-				searchQuery: search.query,
-				marketPriceLow: analysis?.marketPriceLow ?? null,
-				marketPriceHigh: analysis?.marketPriceHigh ?? null,
-				redFlags: analysis?.redFlags ?? [],
-			});
-
-			if (search.discordChannelId) {
-				await discord.sendToChannel(search.discordChannelId, embed);
-			} else {
-				// DM via discord link
-				const [link] = await db
-					.select({ discordUserId: discordLinks.discordUserId })
-					.from(discordLinks)
-					.where(eq(discordLinks.userId, userId));
-				if (!link) {
-					return { status: "failed" as const, error: "No Discord channel and no linked account" };
-				}
-				await discord.sendDm(link.discordUserId, embed);
-			}
-			return { status: "sent" as const, error: null };
-		});
-	}
 };
 
+// "discord" kept in DB enum for historical display — new notifications always use "webhook"
 const sendToChannel = async (
 	deps: NotifyDeps,
-	channel: "webhook" | "discord",
+	channel: "webhook",
 	analysisId: string,
 	searchId: string,
 	userId: string,
