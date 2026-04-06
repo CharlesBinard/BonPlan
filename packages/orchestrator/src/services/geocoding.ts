@@ -1,15 +1,11 @@
 import { createLogger } from "@bonplan/shared";
+import type { GeocodedLocation } from "@bonplan/shared";
+
+export type { GeocodedLocation } from "@bonplan/shared";
 
 const logger = createLogger("orchestrator");
 
 const GEOCODING_API = "https://data.geopf.fr/geocodage/search/";
-
-export type GeocodedLocation = {
-	city: string;
-	postcode: string;
-	latitude: number;
-	longitude: number;
-};
 
 /**
  * Geocode a city name using the French government API (data.geopf.fr).

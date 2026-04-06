@@ -60,3 +60,10 @@ export const getScoreBand = (score: number): ScoreBand => {
 	if (clamped >= 30) return ScoreBand.Overpriced;
 	return ScoreBand.Poor;
 };
+
+export type GeocodedLocation = {
+	city: string;
+	postcode: string;
+	latitude: number;
+	longitude: number;
+};

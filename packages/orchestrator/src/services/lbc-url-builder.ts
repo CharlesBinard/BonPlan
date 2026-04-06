@@ -1,4 +1,4 @@
-import type { GeocodedLocation } from "./geocoding";
+import type { GeocodedLocation } from "@bonplan/shared";
 
 export type LbcUrlParams = {
 	text: string;
