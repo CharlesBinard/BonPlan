@@ -38,7 +38,8 @@ Determine what the listing is ACTUALLY SELLING:
 
 Signals for SYSTEM (NOT standalone):
 - Title lists full specs: CPU + GPU + RAM + storage
-- Words: "PC", "config", "tour", "setup", "build", "gaming rig", "ordinateur", "unité centrale", "station de travail"
+- Words indicating a COMPLETE SYSTEM being sold: "PC gaming", "config complète", "tour complète", "setup complet", "build complet", "gaming rig", "ordinateur complet", "unité centrale", "station de travail"
+- IMPORTANT: "PC" alone in context like "CPU pour PC gaming" or "idéal pour PC" does NOT mean SYSTEM — the listing is describing the product's use case, not selling a PC. Only classify as SYSTEM when the listing is SELLING a complete computer with multiple components.
 - Price much higher than the standalone product would cost
 - Photos showing an assembled computer
 
@@ -48,7 +49,14 @@ Signals for STANDALONE:
 - Original box/packaging mentioned
 - Upgrade as reason for selling ("passage au...", "upgraded to...")
 
-**HARD RULE: If the user searched for a specific component (e.g., "5950x", "RTX 4090") and the listing is a SYSTEM or BUNDLE, check the "Bundles autorisés" field in the search criteria below. If bundles are NOT allowed (NON), set matchesQuery=false and score ≤ 20. If bundles ARE allowed (OUI), evaluate the listing normally — BUNDLE/SYSTEM listings can have matchesQuery=true and full scores.**
+Signals for IRRELEVANT:
+- Wanted/buying ads: "Recherche", "Achète", "Cherche", "Je cherche" — these are NOT sales
+- Services: "installation", "montage", "réparation", "dépannage" — not selling a product
+- Completely different product despite keyword match
+
+**When classification is ambiguous:**
+- Between STANDALONE and BUNDLE: prefer STANDALONE if the searched product is clearly the main item (> 70% of listing value) and extras are trivial (thermal paste, stock cooler, cables, original box contents)
+- Between BUNDLE and SYSTEM: prefer SYSTEM only if 3+ major components are listed together (CPU + GPU + RAM + storage + motherboard)
 
 ## STEP 2 — ESTIMATE market price
 
@@ -56,42 +64,70 @@ For STANDALONE matches, estimate the fair market price range for the item in its
 - Consider: new vs used, condition described, accessories included, age of product
 - Use the market research data provided (if any) as reference
 - Distinguish between "asking prices" (typically 10-20% above real market) and actual transaction prices
-- Condition multipliers (vs new retail price): neuf/sealed ×0.85-0.95, très bon état ×0.60-0.75, bon état ×0.45-0.60, état correct ×0.25-0.40
+- Condition multipliers (vs current market price for "très bon état", adjust ±10% based on product age): neuf/sealed ×1.15-1.30, reconditionné ×0.90-1.10, très bon état ×1.0 (baseline), bon état ×0.75-0.90, état correct ×0.50-0.65
+- If NO market research data is provided, widen your estimated price range by ±20% to account for uncertainty. Note "Estimation sans données marché récentes" in the reasoning. Do NOT invent precise prices — acknowledge the uncertainty.
+- **Described defects:** If the listing mentions defects (bent pins, dead pixels, degraded battery, etc.), the low price reflects the defect — it is NOT a deal. Reduce the effective market price by 20-40% to account for the defect, then compare the asking price against this reduced market.
 
 ## STEP 3 — COMPARE asking price vs market
 
 Calculate the approximate discount or premium:
 - discount_pct = (market_mid - asking_price) / market_mid × 100
-- Identify positive signals: good photos, detailed description, original packaging, trusted seller
-- Identify negative signals: no photos, vague description, suspiciously low price, new account
+- Positive signals: multiple clear photos, detailed description, original packaging, seller with good reviews
+- Negative signals: 0€ price, contact info in description (email/phone suggesting off-platform transaction), "envoi uniquement" on high-value items, stock/generic photos on a "used" listing
+- A low price alone is NOT a negative signal — that is the whole point of this service
 
 ## STEP 4 — SCORE with boundary justification
 
 Apply the score using this calibration:
 
-| Score | Meaning | When to use |
-|-------|---------|-------------|
-| 90-100 | Exceptional | >30% below market, exact match, no red flags — RARE, justify thoroughly |
-| 70-89 | Good deal | 10-30% below market, strong match, minor concerns OK |
-| 50-69 | Fair | ±10% of market price, matches criteria, nothing special |
-| 30-49 | Overpriced / partial match | Above market or only partially matches |
-| 0-29 | Poor / no match | Significantly overpriced, wrong item, SYSTEM when STANDALONE wanted |
+| Score   | Meaning     | When to use |
+|---------|-------------|-------------|
+| 90-100  | Exceptional | >30% below market — RARE, justify thoroughly |
+| 75-89   | Good deal   | 10-30% below market, strong match |
+| 60-74   | Fair        | within 10% of market price |
+| 30-59   | Overpriced  | above market or partial match |
+| 0-29    | Poor        | significantly overpriced, wrong item, SYSTEM/BUNDLE when not allowed |
 
 **Scoring guidelines:**
 - The score is PRIMARILY about price vs market value. A cheap listing with a bad description scores HIGHER than an expensive listing with a great description.
-- A STANDALONE match at market price should score **65-75** regardless of listing quality
+- A STANDALONE match at market price should score **60-70** (± quality adjustment)
 - A STANDALONE match 10-20% below market should score **75-85**
-- A STANDALONE match 20%+ below market should score **85-95**
-- Listing quality signals (detailed title, "état neuf", "boîte d'origine", many photos) can adjust by **±5 points max** — they DO NOT justify jumping to a higher score bracket
+- A STANDALONE match 20-30% below market should score **85-92**
+- A STANDALONE match 30%+ below market: verify it's not a scam before scoring 90+
+- Listing quality signals (detailed title, "état neuf", "boîte d'origine", many photos) can adjust by **±5 points TOTAL max** across ALL quality signals combined — they DO NOT justify jumping to a higher score bracket
 - Two listings of the same product at similar prices MUST have similar scores (within ±5), even if one has a better description
-- Only penalize below 60 if there are real concerns (overpriced, missing photos, suspicious)
+- Only penalize below 55 if there are real concerns (significantly overpriced, scam indicators)
 - Empty descriptions are NORMAL on LeBonCoin (search results don't include descriptions). Do NOT add "description vide" or "pas de description" to redFlags. Do NOT penalize for empty descriptions. Only flag real concerns (suspicious price, no photos, scam indicators).
+
+## HARD RULES
+
+These override all other scoring logic:
+
+1. **Free / suspicious prices:** If the asking price is 0€ or more than 60% below market_mid for items worth >100 EUR, add "Prix anormalement bas — vérifier la légitimité" to redFlags and cap the score at 50. Free items (0€) should score ≤ 20.
+
+2. **Bundles/Systems:** If the user searched for a specific component (e.g., "5950x", "RTX 4090") and the listing is a SYSTEM or BUNDLE, check the "Bundles autorisés" field in the search criteria below. If bundles are NOT allowed (NON), set matchesQuery=false and score ≤ 20. If bundles ARE allowed (OUI), evaluate the listing normally — BUNDLE/SYSTEM listings can have matchesQuery=true and full scores.
+
+3. **Defective items:** If the title or description explicitly states the item is broken, defective, or for parts (keywords: "HS", "en panne", "pour pièces", "ne fonctionne plus", "ne s'allume plus", "pins tordus", "cassé", "défectueux", "à réparer"), cap the score at 30 and add the defect to redFlags. A low price on a broken item is NOT a deal.
+
+4. **Sold/Reserved items:** If the title or description contains "VENDU", "RÉSERVÉ", "SOLD", or "[vendu]", set matchesQuery=false and score=0. The item is no longer available.
+
+5. **Negotiable/placeholder prices:** If the price is ≤ 1€ with mentions of "prix en MP", "à débattre", "faire offre", or "contactez-moi pour le prix", treat as unknown price: score 40-50 and add "Prix non affiché" to redFlags.
+
+## Red Flags Guidance
+
+redFlags should ONLY contain genuine concerns. Each red flag must be a short, specific phrase (3-8 words).
+
+**DO flag:** "Prix 60% sous le marché", "Contact hors plateforme demandé", "Photos génériques/stock", "Article décrit comme défectueux", "Envoi uniquement sur article cher", "Annonce déjà vendue/réservée"
+
+**Do NOT flag:** "Prix bas" (that's the point!), "Vendeur particulier" (normal on LBC), "Pas de description" (normal on LBC), "Annonce peu détaillée" (normal), "Compte récent" (not provided in data — do not hallucinate), "Pas de photos" (common, not a trust concern)
+
+When in doubt, ask: "Is this a genuine safety/trust concern, or just a quality observation?" Only include genuine concerns.
 
 ## Few-Shot Examples
 
-Example 1 — STANDALONE, exceptional deal:
+Example 1 — STANDALONE, good deal (sealed, below market):
 Query: "5950x". Title: "AMD Ryzen 9 5950X – NEUF sous blister". Price: 250 EUR.
-→ STANDALONE. Market used: 270-320 EUR. New sealed at 250 EUR is ~15% below market midpoint. Score: 82.
+→ STANDALONE. Market used: 270-320 EUR. New sealed at 250 EUR is ~15% below market midpoint. Score: 82. verdict: "• ~15% sous le prix du marché\n• Neuf sous blister\n• Aucun red flag"
 
 Example 2 — STANDALONE, good deal:
 Query: "5950x". Title: "Processeur ryzen 9 5950x". Price: 250 EUR. 1 photo, no description.
@@ -99,55 +135,41 @@ Query: "5950x". Title: "Processeur ryzen 9 5950x". Price: 250 EUR. 1 photo, no d
 
 Example 3 — STANDALONE, fair (detailed listing):
 Query: "5950x". Title: "AMD Ryzen 9 5950X – État Neuf – Boîte d'origine – Jamais Overclocké". Price: 295 EUR. Good photos, detailed description.
-→ STANDALONE. Market used: 270-320 EUR. At market midpoint (~295 EUR). Great listing quality but price is NOT below market. Score: 72. The detailed description and "état neuf" add +3-4 points, but cannot push above 75 since the price is at market.
+→ STANDALONE. Market used: 270-320 EUR. At market midpoint (~295 EUR). Great listing quality but price is NOT below market. Score: 68. The detailed description and "état neuf" add +3-4 points, but cannot push above 74 since the price is at market. verdict: "• Au prix du marché (~295 EUR)\n• État neuf, boîte d'origine\n• Bon rapport qualité/prix"
 
 Example 4 — STANDALONE, fair (minimal listing):
 Query: "5950x". Title: "Processeur AMD - ryzen 9 5950x". Price: 290 EUR. 1 photo.
-→ STANDALONE. Market used: 270-320 EUR. Slightly below midpoint. Score: 73. Sparse listing but price is slightly better than Example 3. Both Examples 3 and 4 have similar prices, so they MUST have similar scores.
+→ STANDALONE. Market used: 270-320 EUR. Slightly below midpoint. Score: 67. Sparse listing but price is slightly better than Example 3. Both Examples 3 and 4 have similar prices, so they MUST have similar scores.
 
 Example 5 — STANDALONE, fair (at market):
 Query: "5950x". Title: "Amd Ryzen 9 5950X". Price: 300 EUR. Good photos.
-→ STANDALONE. Market used: 270-320 EUR. Mid-market price. Score: 68. Correct price, nothing exceptional.
+→ STANDALONE. Market used: 270-320 EUR. Mid-market price. Score: 65. Correct price, nothing exceptional. verdict: "• Au prix du marché\n• Rien de remarquable\n• Prix correct sans plus"
 
 Example 6 — STANDALONE, overpriced:
 Query: "5950x". Title: "AMD Ryzen 9 5950X". Price: 480 EUR.
-→ STANDALONE but overpriced. Market used: 270-320 EUR. Score: 35. Way above market.
+→ STANDALONE but overpriced. Market used: 270-320 EUR. ~63% above market midpoint. Score: 32. redFlags: []. verdict: "• 63% au-dessus du marché\n• Prix injustifié"
 
 Example 7 — SYSTEM, rejected:
 Query: "5950x". Title: "PC Gamer Ryzen 9 5950X RTX 3080 32Go". Price: 1800 EUR.
 → SYSTEM. matchesQuery=false. Score: 10. User wants a CPU, not a PC.
 
-Example 8 — BUNDLE, edge case:
-Query: "5950x". Title: "Setup AMD RYZEN 9 5950X + RAM + CM + ALIM + SSD". Price: 445 EUR.
-→ BUNDLE (CPU + motherboard + RAM + PSU + SSD). matchesQuery=false. Score: 15. User wants CPU alone.
+Example 8 — STANDALONE, suspicious (probable scam):
+Query: "RTX 4090". Title: "RTX 4090 neuve jamais utilisée". Price: 350 EUR. No photos, description: "contactez moi par mail pour arrangement rapide, envoi colissimo".
+→ STANDALONE. Market used: 1200-1500 EUR. Price is 75% below market — almost certainly a scam. Score: 20. redFlags: ["Prix 75% sous le marché — probable arnaque", "Contact hors plateforme", "Envoi uniquement"]. verdict: "• Prix irréaliste (75% sous le marché)\n• Probable arnaque\n• Contact hors plateforme demandé"
 
-Example 9 — ACCESSORY, rejected:
-Query: "5950x". Title: "Ventirad Noctua NH-D15 compatible AM4". Price: 55 EUR.
-→ ACCESSORY. matchesQuery=false. Score: 5.
+Example 9 — STANDALONE, defective:
+Query: "5950x". Title: "AMD Ryzen 9 5950X - 1 pin tordu". Price: 150 EUR. 2 photos.
+→ STANDALONE but defective. Market used: 270-320 EUR for working unit. Pin damage = significant defect. Score: 25. redFlags: ["Pin tordu — processeur potentiellement inutilisable"]. verdict: "• Pin tordu signalé\n• Prix bas justifié par le défaut\n• Risque élevé"
 
-**Verdict format:** Le verdict DOIT être en 2-3 bullet points (• ligne1\n• ligne2), PAS un paragraphe. Chaque point doit être concis (< 15 mots).
+**Verdict format:** Le verdict DOIT être en 2-3 bullet points (• ligne1\n• ligne2), PAS un paragraphe. Chaque point < 15 mots.
+Le PREMIER bullet point doit mentionner le positionnement prix (ex: "• 15% sous le prix du marché" ou "• Au prix du marché" ou "• 30% au-dessus du marché").
 
 **Comparables:** Retourne les 3-5 prix comparables les plus pertinents parmi les données de recherche marché fournies. Chaque comparable a: title (string), price (number en EUR), source (string). Si aucune donnée marché n'est fournie, retourne un tableau vide [].
 
 When analyzing a SINGLE listing, respond with a JSON object.
 When analyzing MULTIPLE listings, respond with a JSON array of objects (one per listing, in order).
 
-IMPORTANT: All text fields (reasoning, verdict, redFlags) MUST be written in French. The users are French.
-
-Each result object must have these fields (put reasoning FIRST):
-{
-  "id": number (the listing number from the input),
-  "reasoning": "Raisonnement étape par étape: 1) Classification, 2) Prix du marché, 3) Comparaison de prix",
-  "listingType": "STANDALONE" | "SYSTEM" | "BUNDLE" | "ACCESSORY" | "IRRELEVANT",
-  "matchesQuery": true/false,
-  "score": 0-100,
-  "verdict": "• Point clé 1\\n• Point clé 2\\n• Point clé 3",
-  "marketPriceLow": number (EUR) or null,
-  "marketPriceHigh": number (EUR) or null,
-  "redFlags": [] or ["Annonce peu détaillée", "Pas de photos"],
-  "comparables": [{"title": "Produit similaire", "price": 650, "source": "backmarket.fr"}]
-}
-
+Put reasoning FIRST in the JSON output. All text fields (reasoning, verdict, redFlags) MUST be written in French.
 Respond with ONLY valid JSON (no markdown, no explanation).`;
 
 export const buildAnalysisPrompt = (input: PromptInput): { system: string; user: string } => {
@@ -160,7 +182,7 @@ export const buildAnalysisPrompt = (input: PromptInput): { system: string; user:
 <listing>
 - **Title:** ${input.listing.title}
 - **Price:** ${priceEur} EUR
-- **Description:** ${input.listing.description}
+- **Description:** ${input.listing.description || "(pas de description)"}
 - **Vendeur:** ${input.listing.sellerType}${input.listing.sellerName ? ` (${input.listing.sellerName})` : ""}${input.listing.sellerRating != null ? ` — Note: ${(input.listing.sellerRating * 5).toFixed(1)}/5 (${input.listing.sellerReviewCount ?? 0} avis)` : ""}
 - **Location:** ${input.listing.location}
 - **Photos:** ${input.listing.images.length > 0 ? `${input.listing.images.length} photo(s)` : "No photos"}
@@ -201,7 +223,7 @@ export const buildBatchAnalysisPrompt = (input: BatchPromptInput): { system: str
 			return `<listing id="${item.id}">
 - Title: ${item.listing.title}
 - Price: ${priceEur} EUR
-- Description: ${item.listing.description || "(empty)"}
+- Description: ${item.listing.description || "(pas de description)"}
 - Vendeur: ${item.listing.sellerType}${item.listing.sellerName ? ` (${item.listing.sellerName})` : ""}${item.listing.sellerRating != null ? ` — Note: ${(item.listing.sellerRating * 5).toFixed(1)}/5 (${item.listing.sellerReviewCount ?? 0} avis)` : ""}
 - Location: ${item.listing.location}
 - Photos: ${item.listing.images.length > 0 ? `${item.listing.images.length} photo(s)` : "No photos"}
@@ -209,13 +231,13 @@ export const buildBatchAnalysisPrompt = (input: BatchPromptInput): { system: str
 		})
 		.join("\n\n");
 
-	let user = `Evaluate each of the ${input.items.length} listings below against the user's search. Return a JSON array with one result per listing.
+	let user = `Evaluate each of the ${input.items.length} listings below INDEPENDENTLY against the user's search and market data. Do NOT compare listings to each other — score each one against the market reference only. Return a JSON array with one result per listing.
 
 ## Search Criteria
 
 **User is searching for:** "${input.searchQuery}"
 **What makes a good match:** ${input.judgmentCriteria}
-**Bundles autorisés:** ${input.allowBundles ? "OUI — les lots/bundles contenant le produit sont acceptés." : "NON — seul le produit vendu seul est accepté."}
+**Bundles autorisés:** ${input.allowBundles ? "OUI — les lots/bundles contenant le produit sont acceptés et doivent être évalués normalement." : "NON — seul le produit vendu seul est accepté. Les lots/bundles/systèmes doivent avoir matchesQuery=false et score ≤ 20."}
 
 ## Listings to Analyze
 
