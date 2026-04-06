@@ -14,12 +14,21 @@
 
 ## Phase 1: Discord Bot Removal
 
-### Task 1: Remove Discord bot files and dependency
+### Task 1: Remove Discord bot code from notifier
+
+> Merged task: deletes Discord bot files, removes discord.js dependency, AND removes all Discord code paths from notify.ts/index.ts in one atomic step. Typecheck is impossible between deleting the files and removing their imports.
+
+**Note — intentionally kept Discord references (no changes needed):**
+- `packages/shared/src/types.ts` — `NotificationChannel.Discord` enum value (used for historical display)
+- `packages/frontend/src/routes/NotificationsPage.tsx` — displays historical Discord notifications
+- `packages/gateway/src/routes/notifications/` — channel filter supports `"discord"` for querying history
 
 **Files:**
 - Delete: `packages/notifier/src/discord/` (entire directory)
 - Delete: `packages/notifier/src/__tests__/discord-embed.test.ts`
 - Modify: `packages/notifier/package.json` (remove discord.js)
+- Modify: `packages/notifier/src/notify.ts`
+- Modify: `packages/notifier/src/index.ts`
 
 - [ ] **Step 1: Delete the discord directory**
 
@@ -39,22 +48,7 @@ rm packages/notifier/src/__tests__/discord-embed.test.ts
 cd packages/notifier && bun remove discord.js
 ```
 
-- [ ] **Step 4: Commit**
-
-```bash
-git add -A packages/notifier/src/discord/ packages/notifier/src/__tests__/discord-embed.test.ts packages/notifier/package.json bun.lock
-git commit -m "chore(notifier): remove Discord bot files and discord.js dependency"
-```
-
----
-
-### Task 2: Simplify notifier — remove Discord code path
-
-**Files:**
-- Modify: `packages/notifier/src/notify.ts`
-- Modify: `packages/notifier/src/index.ts`
-
-- [ ] **Step 1: Clean up notify.ts**
+- [ ] **Step 4: Clean up notify.ts**
 
 In `packages/notifier/src/notify.ts`:
 
@@ -76,7 +70,7 @@ Add a comment to the `"webhook"` channel value:
 // "discord" kept in DB enum for historical display — new notifications always use "webhook"
 ```
 
-- [ ] **Step 2: Clean up index.ts**
+- [ ] **Step 5: Clean up index.ts**
 
 In `packages/notifier/src/index.ts`:
 
@@ -88,21 +82,21 @@ Remove:
 
 The deps object passed to `startNotificationConsumer` should no longer include `discord`.
 
-- [ ] **Step 3: Run typecheck**
+- [ ] **Step 6: Run typecheck**
 
 Run: `cd packages/notifier && bun run typecheck`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add packages/notifier/src/notify.ts packages/notifier/src/index.ts
-git commit -m "refactor(notifier): remove Discord code path, webhook-only notifications"
+git add -A packages/notifier/src/discord/ packages/notifier/src/__tests__/discord-embed.test.ts packages/notifier/package.json bun.lock packages/notifier/src/notify.ts packages/notifier/src/index.ts
+git commit -m "refactor(notifier): remove Discord bot files, dependency, and code paths"
 ```
 
 ---
 
-### Task 3: Remove Discord from gateway
+### Task 2: Remove Discord from gateway
 
 **Files:**
 - Delete: `packages/gateway/src/routes/discord/` (entire directory)
@@ -163,7 +157,7 @@ git commit -m "refactor(gateway): remove Discord routes, middleware, and setting
 
 ---
 
-### Task 4: Remove Discord from shared package and DB schema
+### Task 3: Remove Discord from shared package and DB schema
 
 **Files:**
 - Modify: `packages/shared/src/db/schema.ts`
@@ -240,7 +234,7 @@ git commit -m "refactor(shared): remove Discord schema, config, and gateway fiel
 
 ---
 
-### Task 5: Remove Discord from frontend and infrastructure
+### Task 4: Remove Discord from frontend and infrastructure
 
 **Files:**
 - Modify: `packages/frontend/src/routes/SettingsPage.tsx`
@@ -300,7 +294,7 @@ Remove from notifier service env:
 - [ ] **Step 6: Run typecheck**
 
 Run: `bun run typecheck`
-Expected: PASS (may have some errors from Orval-generated code referencing deleted Discord types — see Task 6)
+Expected: PASS (may have some errors from Orval-generated code referencing deleted Discord types — see Task 9)
 
 - [ ] **Step 7: Commit**
 
@@ -313,7 +307,7 @@ git commit -m "refactor: remove Discord from frontend and infrastructure"
 
 ## Phase 2: Webhook UI + Discord Auto-Detection
 
-### Task 6: DB — add defaultWebhookUrl and defaultMinScore to users
+### Task 5: DB — add defaultWebhookUrl and defaultMinScore to users
 
 **Files:**
 - Modify: `packages/shared/src/db/schema.ts`
@@ -345,16 +339,32 @@ git commit -m "feat(db): add defaultWebhookUrl and defaultMinScore to users tabl
 
 ---
 
-### Task 7: Discord webhook embed builder (plain JSON, no discord.js)
+### Task 6: Move SSRF + discord-embed utilities to @bonplan/shared
+
+> The gateway cannot import from the notifier package. Both gateway (webhook-test endpoint) and notifier (sendWebhook) need SSRF validation and Discord embed building. These utilities must live in `@bonplan/shared`.
 
 **Files:**
-- Create: `packages/notifier/src/webhook/discord-embed.ts`
+- Move: `packages/notifier/src/webhook/ssrf.ts` → `packages/shared/src/ssrf.ts`
+- Create: `packages/shared/src/discord-embed.ts`
+- Modify: `packages/shared/package.json` (add subpath exports)
+- Modify: `packages/notifier/src/webhook/webhook.ts` (update import)
 
-- [ ] **Step 1: Create the discord embed builder**
+- [ ] **Step 1: Move ssrf.ts to shared**
 
-Create `packages/notifier/src/webhook/discord-embed.ts`:
+```bash
+cp packages/notifier/src/webhook/ssrf.ts packages/shared/src/ssrf.ts
+rm packages/notifier/src/webhook/ssrf.ts
+```
+
+- [ ] **Step 2: Create discord-embed.ts in shared**
+
+Create `packages/shared/src/discord-embed.ts`:
 
 ```ts
+/**
+ * WebhookPayload — canonical type for webhook notification data.
+ * Used by both the notifier (sendWebhook) and the gateway (webhook-test).
+ */
 export type WebhookPayload = {
 	title: string;
 	price: number; // cents
@@ -437,54 +447,64 @@ export function buildDiscordWebhookPayload(input: WebhookPayload): { embeds: Dis
 }
 ```
 
-- [ ] **Step 2: Run typecheck**
+- [ ] **Step 3: Add subpath exports to shared package.json**
 
-Run: `cd packages/notifier && bun run typecheck`
+In `packages/shared/package.json`, add to the `"exports"` field:
+
+```json
+"./ssrf": "./src/ssrf.ts",
+"./discord-embed": "./src/discord-embed.ts"
+```
+
+- [ ] **Step 4: Update notifier imports**
+
+In `packages/notifier/src/webhook/webhook.ts`, update SSRF import:
+```ts
+// Before:
+import { validateWebhookUrl, validateWebhookIp } from "./ssrf";
+// After:
+import { validateWebhookUrl, validateWebhookIp } from "@bonplan/shared/ssrf";
+```
+
+- [ ] **Step 5: Run typecheck**
+
+Run: `bun run typecheck`
 Expected: PASS
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add packages/notifier/src/webhook/discord-embed.ts
-git commit -m "feat(notifier): add Discord webhook embed builder (plain JSON, no discord.js)"
+git add packages/shared/src/ssrf.ts packages/shared/src/discord-embed.ts packages/shared/package.json packages/notifier/src/webhook/ssrf.ts packages/notifier/src/webhook/webhook.ts
+git commit -m "refactor: move SSRF and discord-embed utilities to @bonplan/shared"
 ```
 
 ---
 
-### Task 8: Update sendWebhook to auto-detect Discord and use extended payload
+### Task 7: Update sendWebhook to auto-detect Discord and use extended payload
 
 **Files:**
 - Modify: `packages/notifier/src/webhook/webhook.ts`
 - Modify: `packages/notifier/src/notify.ts`
 
-- [ ] **Step 1: Update WebhookPayload type and sendWebhook function**
+- [ ] **Step 1: Update sendWebhook to use shared WebhookPayload and auto-detect Discord**
 
 In `packages/notifier/src/webhook/webhook.ts`:
 
-Replace the `WebhookPayload` type with the extended version (add `location` and `redFlags`):
+Remove the local `WebhookPayload` type definition and import it from shared instead:
 
 ```ts
-export type WebhookPayload = {
-	title: string;
-	price: number;
-	priceFormatted: string;
-	score: number;
-	verdict: string;
-	url: string;
-	image: string | null;
-	searchQuery: string;
-	marketPriceLow: number | null;
-	marketPriceHigh: number | null;
-	location: string | null;
-	redFlags: string[];
-};
+import type { WebhookPayload } from "@bonplan/shared/discord-embed";
+import { buildDiscordWebhookPayload, isDiscordWebhookUrl } from "@bonplan/shared/discord-embed";
+```
+
+Re-export the type for convenience:
+```ts
+export type { WebhookPayload };
 ```
 
 Update the `sendWebhook` function to auto-detect Discord URLs:
 
 ```ts
-import { buildDiscordWebhookPayload, isDiscordWebhookUrl } from "./discord-embed";
-
 // In the sendWebhook function, before the fetch call:
 const body = isDiscordWebhookUrl(webhookUrl)
     ? buildDiscordWebhookPayload(payload)
@@ -528,7 +548,7 @@ git commit -m "feat(notifier): auto-detect Discord webhook URLs and send rich em
 
 ---
 
-### Task 9: Gateway — settings endpoints for webhook defaults
+### Task 8: Gateway — settings endpoints for webhook defaults
 
 **Files:**
 - Modify: `packages/gateway/src/routes/settings/settings.routes.ts`
@@ -601,8 +621,8 @@ Add handling for `defaultWebhookUrl` and `defaultMinScore` in the update handler
 settingsRoutes.openapi(webhookTestRoute, async (c) => {
 	const { url } = c.req.valid("json");
 
-	// SSRF validation
-	const { validateWebhookUrl, validateWebhookIp } = await import("../../lib/ssrf");
+	// SSRF validation — import from @bonplan/shared
+	const { validateWebhookUrl, validateWebhookIp } = await import("@bonplan/shared/ssrf");
 	const urlCheck = validateWebhookUrl(url, process.env.NODE_ENV !== "production");
 	if (!urlCheck.valid) {
 		return c.json({ error: urlCheck.reason ?? "URL invalide" }, 400);
@@ -613,8 +633,8 @@ settingsRoutes.openapi(webhookTestRoute, async (c) => {
 		return c.json({ error: ipCheck.reason ?? "URL invalide" }, 400);
 	}
 
-	// Import discord detection
-	const { isDiscordWebhookUrl, buildDiscordWebhookPayload } = await import("@bonplan/notifier/webhook/discord-embed");
+	// Import discord detection from @bonplan/shared
+	const { isDiscordWebhookUrl, buildDiscordWebhookPayload } = await import("@bonplan/shared/discord-embed");
 
 	const testPayload = {
 		title: "Test BonPlan Webhook",
@@ -641,6 +661,7 @@ settingsRoutes.openapi(webhookTestRoute, async (c) => {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(body),
 			signal: AbortSignal.timeout(10000),
+			redirect: "error", // Prevent SSRF via redirect
 		});
 
 		if (!res.ok) {
@@ -657,8 +678,6 @@ settingsRoutes.openapi(webhookTestRoute, async (c) => {
 });
 ```
 
-Note: The SSRF validation functions may need to be imported from the notifier package or copied. Check if they're accessible from the gateway. If not, move the SSRF validation to `@bonplan/shared` or use a dynamic import path. Adapt as needed during implementation.
-
 - [ ] **Step 7: Run typecheck**
 
 Run: `cd packages/gateway && bun run typecheck`
@@ -673,30 +692,78 @@ git commit -m "feat(gateway): add webhook default settings and webhook-test endp
 
 ---
 
+### Task 9: Apply migrations and regenerate Orval
+
+> This task MUST be done after all backend tasks and BEFORE any frontend UI tasks. The Orval-generated types must reflect the new settings schema for frontend tasks to typecheck.
+
+- [ ] **Step 1: Apply migrations**
+
+Run: `cd packages/shared && bunx drizzle-kit push`
+Expected: Migrations applied (drop discord_links, drop notifyDiscord/discordChannelId from searches, add defaultWebhookUrl/defaultMinScore to users)
+
+- [ ] **Step 2: Record migration in journal**
+
+Same pattern as previous migrations — insert the migration hash into `drizzle.__drizzle_migrations`.
+
+- [ ] **Step 3: Start gateway and regenerate Orval**
+
+```bash
+# Start gateway temporarily
+cd packages/gateway && set -a && source ../../.env && set +a && NODE_ENV=development bun run src/index.ts &
+sleep 4
+cd packages/frontend && bun run orval
+# Kill gateway
+pkill -f "bun run src/index.ts"
+```
+
+- [ ] **Step 4: Run full typecheck**
+
+Run: `bun run typecheck`
+Expected: All packages PASS
+
+- [ ] **Step 5: Commit Orval output**
+
+```bash
+git add packages/frontend/src/api/generated/
+git commit -m "chore(frontend): regenerate Orval API client after Discord removal + webhook changes"
+```
+
+---
+
 ### Task 10: Frontend — Settings "Notifications" tab
 
 **Files:**
 - Modify: `packages/frontend/src/routes/SettingsPage.tsx`
 
-- [ ] **Step 1: Replace WebhooksTab stub with functional NotificationsTab**
+- [ ] **Step 1: Add missing imports**
+
+Ensure SettingsPage.tsx has:
+```ts
+import { api } from "@/config/api";
+import { toast } from "sonner";
+```
+
+- [ ] **Step 2: Replace WebhooksTab stub with functional NotificationsTab**
+
+Note: SettingsPage has its own local `FormField` component that does NOT support `helpText`. Use inline `<p className="text-xs text-muted-foreground">` below inputs instead.
 
 Replace the static `WebhooksTab` component with a functional `NotificationsTab`:
 
 ```tsx
 const NotificationsTab = () => {
-	const { data: settings } = useSettings();
+	const { data: settings, isLoading: settingsLoading } = useSettings();
 	const updateSettings = useUpdateSettings();
-	const [webhookUrl, setWebhookUrl] = useState(settings?.data?.defaultWebhookUrl ?? "");
-	const [minScore, setMinScore] = useState(String(settings?.data?.defaultMinScore ?? 70));
+	const [webhookUrl, setWebhookUrl] = useState("");
+	const [minScore, setMinScore] = useState("70");
 	const [testing, setTesting] = useState(false);
 
-	// Sync from server data
+	// Sync from server data — avoids flash from initializing state with async data
 	useEffect(() => {
-		if (settings?.data) {
-			setWebhookUrl(settings.data.defaultWebhookUrl ?? "");
-			setMinScore(String(settings.data.defaultMinScore ?? 70));
+		if (settings) {
+			setWebhookUrl(settings.defaultWebhookUrl ?? "");
+			setMinScore(String(settings.defaultMinScore ?? 70));
 		}
-	}, [settings?.data]);
+	}, [settings]);
 
 	const handleSave = async () => {
 		await updateSettings.mutateAsync({
@@ -727,8 +794,8 @@ const NotificationsTab = () => {
 				<CardDescription>URL par défaut pour les nouvelles recherches. Compatible Discord webhook.</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
-				<FormField label="URL Webhook" htmlFor="defaultWebhookUrl"
-					helpText="Discord webhook (discord.com/api/webhooks/...) ou URL custom HTTPS">
+				<div className="flex flex-col gap-1.5">
+					<Label htmlFor="defaultWebhookUrl">URL Webhook</Label>
 					<div className="flex gap-2">
 						<Input id="defaultWebhookUrl" placeholder="https://discord.com/api/webhooks/..."
 							value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} className="flex-1" />
@@ -737,12 +804,14 @@ const NotificationsTab = () => {
 							{testing ? <Loader2Icon className="animate-spin size-4" /> : "Tester"}
 						</Button>
 					</div>
-				</FormField>
-				<FormField label="Score minimum par défaut" htmlFor="defaultMinScore"
-					helpText="Seuil de notification (0-100)">
+					<p className="text-xs text-muted-foreground">Discord webhook (discord.com/api/webhooks/...) ou URL custom HTTPS</p>
+				</div>
+				<div className="flex flex-col gap-1.5">
+					<Label htmlFor="defaultMinScore">Score minimum par défaut</Label>
 					<Input id="defaultMinScore" type="number" min={0} max={100}
 						value={minScore} onChange={(e) => setMinScore(e.target.value)} />
-				</FormField>
+					<p className="text-xs text-muted-foreground">Seuil de notification (0-100)</p>
+				</div>
 				<Button onClick={handleSave} disabled={updateSettings.isPending}>
 					{updateSettings.isPending ? <Loader2Icon className="animate-spin" /> : null}
 					Sauvegarder
@@ -758,7 +827,7 @@ Update the tab trigger from "Webhooks" to "Notifications" and wire `Notification
 - [ ] **Step 2: Run typecheck**
 
 Run: `cd packages/frontend && bun run typecheck`
-Expected: PASS (may need Orval regen first)
+Expected: PASS
 
 - [ ] **Step 3: Commit**
 
@@ -775,7 +844,7 @@ git commit -m "feat(frontend): replace webhook stub with functional Notification
 - Modify: `packages/frontend/src/routes/SearchesPage.tsx`
 - Modify: `packages/frontend/src/forms/schemas.ts`
 
-- [ ] **Step 1: Update frontend schema**
+- [ ] **Step 1: Update frontend schemas**
 
 In `packages/frontend/src/forms/schemas.ts`, add to `searchCreateSchema` (after `analyzeImages`):
 
@@ -783,51 +852,59 @@ In `packages/frontend/src/forms/schemas.ts`, add to `searchCreateSchema` (after 
 	notifyWebhook: z.string().url().refine((url) => url.startsWith("https://"), "L'URL doit utiliser HTTPS").optional().nullable(),
 ```
 
-- [ ] **Step 2: Add webhook state and UI to SearchCreateDialog**
+Also add to `searchUpdateSchema`:
 
-In `packages/frontend/src/routes/SearchesPage.tsx`, in `SearchCreateDialog`:
-
-Add state:
 ```ts
-const [enableWebhook, setEnableWebhook] = useState(false);
-const [webhookUrl, setWebhookUrl] = useState("");
+	notifyWebhook: z.string().url().optional().nullable(),
 ```
 
-Fetch user settings to get defaults:
+- [ ] **Step 2: Add missing import and webhook state/UI to SearchCreateDialog**
+
+In `packages/frontend/src/routes/SearchesPage.tsx`:
+
+Add `useSettings` to imports from `@/api`:
 ```ts
-const { data: settings } = useSettings();
+import { useSettings, /* ...existing imports */ } from "@/api";
+```
+
+In `SearchCreateDialog`, add state (do NOT initialize from async data — use useEffect):
+```ts
+const { data: settings, isLoading: settingsLoading } = useSettings();
+const [enableWebhook, setEnableWebhook] = useState(false);
+const [webhookUrl, setWebhookUrl] = useState("");
+const [minScore, setMinScore] = useState("70");
+```
+
+Sync from settings when data loads (fixes toggle flash):
+```tsx
+useEffect(() => {
+    if (settings?.defaultWebhookUrl) {
+        setEnableWebhook(true);
+        setWebhookUrl(settings.defaultWebhookUrl);
+    }
+}, [settings?.defaultWebhookUrl]);
+
+useEffect(() => {
+    if (settings?.defaultMinScore != null) {
+        setMinScore(String(settings.defaultMinScore));
+    }
+}, [settings?.defaultMinScore]);
 ```
 
 Pre-fill when toggle is enabled:
 ```ts
 useEffect(() => {
-    if (enableWebhook && !webhookUrl && settings?.data?.defaultWebhookUrl) {
-        setWebhookUrl(settings.data.defaultWebhookUrl);
+    if (enableWebhook && !webhookUrl && settings?.defaultWebhookUrl) {
+        setWebhookUrl(settings.defaultWebhookUrl);
     }
 }, [enableWebhook]);
 ```
 
-Default `enableWebhook` to `true` when global URL exists:
-```ts
-useEffect(() => {
-    if (settings?.data?.defaultWebhookUrl) {
-        setEnableWebhook(true);
-        setWebhookUrl(settings.data.defaultWebhookUrl);
-    }
-}, [settings?.data?.defaultWebhookUrl]);
-```
-
-Pre-fill minScore from defaultMinScore:
-```ts
-const [minScore, setMinScore] = useState(
-    String(settings?.data?.defaultMinScore ?? 70)
-);
-```
-
 Add to `reset()`:
 ```ts
-setEnableWebhook(!!settings?.data?.defaultWebhookUrl);
-setWebhookUrl(settings?.data?.defaultWebhookUrl ?? "");
+setEnableWebhook(!!settings?.defaultWebhookUrl);
+setWebhookUrl(settings?.defaultWebhookUrl ?? "");
+setMinScore(String(settings?.defaultMinScore ?? 70));
 ```
 
 Add to `onSubmit` safeParse:
@@ -846,11 +923,16 @@ Add the toggle UI after the "Analyser les images" toggle:
 </div>
 
 {enableWebhook && (
-    <FormField label="URL Webhook" htmlFor="webhookUrl"
-        helpText={webhookUrl ? undefined : "Configurez une URL par défaut dans Paramètres > Notifications, ou saisissez une URL ci-dessous."}>
+    <div className="flex flex-col gap-1.5">
+        <Label htmlFor="webhookUrl">URL Webhook</Label>
         <Input id="webhookUrl" placeholder="https://discord.com/api/webhooks/..."
             value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} />
-    </FormField>
+        {!webhookUrl && (
+            <p className="text-xs text-muted-foreground">
+                Configurez une URL par défaut dans Paramètres &gt; Notifications, ou saisissez une URL ci-dessous.
+            </p>
+        )}
+    </div>
 )}
 ```
 
@@ -883,7 +965,17 @@ git commit -m "feat(frontend): add webhook toggle with URL field to SearchCreate
 **Files:**
 - Modify: `packages/frontend/src/routes/SearchDetailPage.tsx`
 
-- [ ] **Step 1: Add webhook notification section**
+- [ ] **Step 1: Add missing imports**
+
+SearchDetailPage does not import `Input` or `Label`. Add them:
+```ts
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+```
+
+Also ensure `DialogDescription` is imported from `@/components/ui/dialog`.
+
+- [ ] **Step 2: Add webhook notification section**
 
 Add a "Notifications" card/section to the SearchDetailPage showing the current webhook URL and a "Modifier" button that opens a dialog to edit it:
 
@@ -902,19 +994,26 @@ Add a "Notifications" card/section to the SearchDetailPage showing the current w
 </div>
 ```
 
-Add a dialog for editing:
+Add a dialog for editing (with `DialogDescription` for accessibility and a cancel button):
 ```tsx
 <Dialog open={webhookDialogOpen} onOpenChange={setWebhookDialogOpen}>
     <DialogContent>
         <DialogHeader>
             <DialogTitle>Modifier les notifications</DialogTitle>
+            <DialogDescription>
+                Configurez l'URL webhook pour recevoir les notifications de cette recherche.
+            </DialogDescription>
         </DialogHeader>
-        <FormField label="URL Webhook" htmlFor="editWebhookUrl">
+        <div className="flex flex-col gap-1.5">
+            <Label htmlFor="editWebhookUrl">URL Webhook</Label>
             <Input id="editWebhookUrl" value={editWebhookUrl}
                 onChange={(e) => setEditWebhookUrl(e.target.value)}
                 placeholder="https://discord.com/api/webhooks/..." />
-        </FormField>
+        </div>
         <DialogFooter>
+            <Button variant="outline" onClick={() => setWebhookDialogOpen(false)}>
+                Annuler
+            </Button>
             <Button onClick={async () => {
                 await updateSearch.mutateAsync({
                     id: search.id,
@@ -949,41 +1048,9 @@ git commit -m "feat(frontend): add webhook editing dialog to SearchDetailPage"
 
 ---
 
-### Task 13: Apply migrations, regenerate Orval, manual test
+### Task 13: Manual testing
 
-- [ ] **Step 1: Apply migrations**
-
-Run: `cd packages/shared && bunx drizzle-kit push`
-Expected: Migrations applied (drop discord_links, drop notifyDiscord/discordChannelId from searches, add defaultWebhookUrl/defaultMinScore to users)
-
-- [ ] **Step 2: Record migration in journal**
-
-Same pattern as previous migrations — insert the migration hash into `drizzle.__drizzle_migrations`.
-
-- [ ] **Step 3: Start gateway and regenerate Orval**
-
-```bash
-# Start gateway temporarily
-cd packages/gateway && set -a && source ../../.env && set +a && NODE_ENV=development bun run src/index.ts &
-sleep 4
-cd packages/frontend && bun run orval
-# Kill gateway
-pkill -f "bun run src/index.ts"
-```
-
-- [ ] **Step 4: Run full typecheck**
-
-Run: `bun run typecheck`
-Expected: All packages PASS
-
-- [ ] **Step 5: Commit Orval output**
-
-```bash
-git add packages/frontend/src/api/generated/
-git commit -m "chore(frontend): regenerate Orval API client after Discord removal + webhook changes"
-```
-
-- [ ] **Step 6: Manual test — Settings page**
+- [ ] **Step 1: Manual test — Settings page**
 
 1. Go to Settings > Notifications
 2. Enter a webhook URL (e.g., a webhook.site URL)
@@ -991,7 +1058,7 @@ git commit -m "chore(frontend): regenerate Orval API client after Discord remova
 4. Set a default min score (e.g., 75)
 5. Save
 
-- [ ] **Step 7: Manual test — Search creation with webhook**
+- [ ] **Step 2: Manual test — Search creation with webhook**
 
 1. Create a new search
 2. Verify the webhook toggle is ON and URL is pre-filled from Settings
@@ -1000,14 +1067,14 @@ git commit -m "chore(frontend): regenerate Orval API client after Discord remova
 5. Wait for listings + analysis
 6. Verify webhook is received at the URL
 
-- [ ] **Step 8: Manual test — Discord webhook**
+- [ ] **Step 3: Manual test — Discord webhook**
 
 1. Create a Discord webhook in a test channel
 2. Set it as the URL in a search
 3. Wait for a listing with score >= minScore
 4. Verify a rich embed appears in the Discord channel
 
-- [ ] **Step 9: Manual test — SearchDetailPage editing**
+- [ ] **Step 4: Manual test — SearchDetailPage editing**
 
 1. Go to a search detail page
 2. Click "Modifier" in the Notifications section
