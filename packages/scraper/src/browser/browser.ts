@@ -35,21 +35,26 @@ export const getOrCreateConnection = async (browserWsUrl: string): Promise<Brows
 			}
 
 			// Resolve the WebSocket endpoint via /json/version then connect
-			const httpBase = browserWsUrl.replace(/^ws:\/\//, "http://").replace(/^wss:\/\//, "https://");
+			// Chrome CDP rejects Host headers that aren't localhost/IP, so we spoof Host: localhost
+			const cdpUrl = new URL(browserWsUrl.replace(/^ws:\/\//, "http://").replace(/^wss:\/\//, "https://"));
 			let wsEndpoint = browserWsUrl;
 			try {
-				const res = await fetch(`${httpBase}/json/version`, { signal: AbortSignal.timeout(15000) });
+				const res = await fetch(`${cdpUrl.origin}/json/version`, {
+					signal: AbortSignal.timeout(15000),
+					headers: { Host: `localhost:${cdpUrl.port}` },
+				});
 				const json = (await res.json()) as { webSocketDebuggerUrl?: string };
 				if (json.webSocketDebuggerUrl) {
-					const configuredHost = new URL(browserWsUrl).host;
-					wsEndpoint = json.webSocketDebuggerUrl.replace(/^ws:\/\/[^/]+/, `ws://${configuredHost}`);
+					wsEndpoint = json.webSocketDebuggerUrl.replace(/^ws:\/\/[^/]+/, `ws://${cdpUrl.host}`);
 				}
 			} catch (err) {
 				const errMsg = err instanceof Error ? err.message : String(err);
 				logger.warn("Could not fetch /json/version", { error: errMsg });
 			}
 			logger.info("Connecting to browser via CDP", { wsEndpoint });
-			const browser = await chromium.connectOverCDP(wsEndpoint);
+			const browser = await chromium.connectOverCDP(wsEndpoint, {
+				headers: { Host: `localhost:${cdpUrl.port}` },
+			});
 
 			const context =
 				browser.contexts()[0] ??
