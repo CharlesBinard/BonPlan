@@ -70,8 +70,6 @@ searchRoutes.openapi(createSearchRoute, async (c) => {
 			radiusKm: body.radiusKm,
 			intervalMin: body.intervalMin,
 			notifyWebhook: body.notifyWebhook ?? null,
-			notifyDiscord: body.notifyDiscord,
-			discordChannelId: body.discordChannelId ?? null,
 			minScore: body.minScore,
 			allowBundles: body.allowBundles,
 			analyzeImages: body.analyzeImages,

@@ -16,8 +16,6 @@ export const createSearchSchema = z
 			.refine((url) => url.startsWith("https://"), "Webhook must use HTTPS")
 			.optional()
 			.nullable(),
-		notifyDiscord: z.boolean().default(false),
-		discordChannelId: z.string().optional().nullable(),
 		minScore: z.number().int().min(0).max(100).default(70),
 		allowBundles: z.boolean().default(false),
 		analyzeImages: z.boolean().default(false),
@@ -35,8 +33,6 @@ export const updateSearchSchema = z.object({
 		.refine((url) => url.startsWith("https://"), "Webhook must use HTTPS")
 		.optional()
 		.nullable(),
-	notifyDiscord: z.boolean().optional(),
-	discordChannelId: z.string().optional().nullable(),
 	minScore: z.number().int().min(0).max(100).optional(),
 	status: z.enum(["active", "paused"]).optional(),
 });

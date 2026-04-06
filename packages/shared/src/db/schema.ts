@@ -17,6 +17,7 @@ import { PROVIDER_VALUES } from "../ai-models";
 
 // ── Enums
 export const sellerTypeEnum = pgEnum("seller_type", ["pro", "particulier"]);
+// "discord" kept for historical notification records. New notifications always use "webhook". Do not remove.
 export const notificationChannelEnum = pgEnum("notification_channel", ["webhook", "discord"]);
 export const notificationStatusEnum = pgEnum("notification_status", ["pending", "sent", "failed"]);
 export const searchStatusEnum = pgEnum("search_status", ["pending", "mapping", "active", "paused", "blocked"]);
@@ -107,8 +108,6 @@ export const searches = pgTable(
 		aiContext: jsonb("ai_context"),
 		status: searchStatusEnum("status").notNull().default("pending"),
 		notifyWebhook: text("notify_webhook"),
-		notifyDiscord: boolean("notify_discord").notNull().default(false),
-		discordChannelId: text("discord_channel_id"),
 		minScore: integer("min_score").notNull().default(70),
 		allowBundles: boolean("allow_bundles").notNull().default(false),
 		analyzeImages: boolean("analyze_images").notNull().default(false),
@@ -293,13 +292,3 @@ export const notifications = pgTable(
 	],
 );
 
-// ── Discord Links
-export const discordLinks = pgTable("discord_links", {
-	id: uuid("id").primaryKey().defaultRandom(),
-	userId: uuid("user_id")
-		.notNull()
-		.unique()
-		.references(() => users.id, { onDelete: "cascade" }),
-	discordUserId: text("discord_user_id").notNull().unique(),
-	linkedAt: timestamp("linked_at", { withTimezone: true }).notNull().defaultNow(),
-});

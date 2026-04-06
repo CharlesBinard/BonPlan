@@ -26,8 +26,6 @@ export const searchResponseSchema = z.object({
 	status: z.enum(["pending", "mapping", "active", "paused", "blocked"]),
 	aiContext: aiContextSchema,
 	notifyWebhook: z.string().nullable(),
-	notifyDiscord: z.boolean(),
-	discordChannelId: z.string().nullable(),
 	minScore: z.number().int(),
 	allowBundles: z.boolean(),
 	analyzeImages: z.boolean(),
