@@ -1,3 +1,4 @@
+import { lookup } from "node:dns/promises";
 import { createLogger } from "@bonplan/shared";
 import { type Browser, type BrowserContext, chromium, type Page } from "patchright-core";
 import { checkForBlock } from "../parsing/parser";
@@ -34,27 +35,32 @@ export const getOrCreateConnection = async (browserWsUrl: string): Promise<Brows
 				return { browser: cachedBrowser, context: cachedContext as BrowserContext, isNew: false };
 			}
 
-			// Resolve the WebSocket endpoint via /json/version then connect
-			// Chrome CDP rejects Host headers that aren't localhost/IP, so we spoof Host: localhost
+			// Chrome CDP rejects Host headers with hostnames (only accepts localhost/IP)
+			// Resolve the hostname to IP so Chrome accepts the connection
 			const cdpUrl = new URL(browserWsUrl.replace(/^ws:\/\//, "http://").replace(/^wss:\/\//, "https://"));
-			let wsEndpoint = browserWsUrl;
+			let resolvedHost = cdpUrl.hostname;
 			try {
-				const res = await fetch(`${cdpUrl.origin}/json/version`, {
-					signal: AbortSignal.timeout(15000),
-					headers: { Host: `localhost:${cdpUrl.port}` },
-				});
+				const { address } = await lookup(cdpUrl.hostname);
+				resolvedHost = address;
+				logger.info("Resolved browser host to IP", { hostname: cdpUrl.hostname, ip: address });
+			} catch {
+				logger.warn("DNS lookup failed, using hostname as-is", { hostname: cdpUrl.hostname });
+			}
+
+			const cdpBase = `http://${resolvedHost}:${cdpUrl.port}`;
+			let wsEndpoint = `ws://${resolvedHost}:${cdpUrl.port}`;
+			try {
+				const res = await fetch(`${cdpBase}/json/version`, { signal: AbortSignal.timeout(15000) });
 				const json = (await res.json()) as { webSocketDebuggerUrl?: string };
 				if (json.webSocketDebuggerUrl) {
-					wsEndpoint = json.webSocketDebuggerUrl.replace(/^ws:\/\/[^/]+/, `ws://${cdpUrl.host}`);
+					wsEndpoint = json.webSocketDebuggerUrl;
 				}
 			} catch (err) {
 				const errMsg = err instanceof Error ? err.message : String(err);
 				logger.warn("Could not fetch /json/version", { error: errMsg });
 			}
 			logger.info("Connecting to browser via CDP", { wsEndpoint });
-			const browser = await chromium.connectOverCDP(wsEndpoint, {
-				headers: { Host: `localhost:${cdpUrl.port}` },
-			});
+			const browser = await chromium.connectOverCDP(wsEndpoint);
 
 			const context =
 				browser.contexts()[0] ??
