@@ -1,5 +1,8 @@
 import { createLogger, encrypt, users } from "@bonplan/shared";
 import { isValidModel, type ProviderType } from "@bonplan/shared/ai-models";
+import { validateWebhookUrl, validateWebhookIp } from "@bonplan/shared/ssrf";
+import { isDiscordWebhookUrl, buildDiscordWebhookPayload } from "@bonplan/shared/discord-embed";
+import type { WebhookPayload } from "@bonplan/shared/discord-embed";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 import { auth } from "../../lib/auth";
@@ -9,6 +12,7 @@ import {
 	changePasswordRoute,
 	getSettingsRoute,
 	updateSettingsRoute,
+	webhookTestRoute,
 } from "./settings.routes";
 
 const logger = createLogger("gateway");
@@ -26,6 +30,8 @@ settingsRoutes.openapi(getSettingsRoute, async (c) => {
 			aiApiKeyEncrypted: users.aiApiKeyEncrypted,
 			aiProvider: users.aiProvider,
 			aiModel: users.aiModel,
+			defaultWebhookUrl: users.defaultWebhookUrl,
+			defaultMinScore: users.defaultMinScore,
 		})
 		.from(users)
 		.where(eq(users.id, userId));
@@ -45,16 +51,18 @@ settingsRoutes.openapi(getSettingsRoute, async (c) => {
 		maskedApiKey,
 		aiProvider: user.aiProvider,
 		aiModel: user.aiModel ?? null,
+		defaultWebhookUrl: user.defaultWebhookUrl ?? null,
+		defaultMinScore: user.defaultMinScore ?? null,
 	});
 });
 
 // @ts-expect-error: openapi handler strict typing vs actual return types
 settingsRoutes.openapi(updateSettingsRoute, async (c) => {
 	const userId = c.get("userId");
-	const { aiProvider, aiModel, aiApiKey, currentPassword } = c.req.valid("json");
+	const { aiProvider, aiModel, aiApiKey, currentPassword, defaultWebhookUrl, defaultMinScore } = c.req.valid("json");
 
 	// No-op guard
-	if (!aiProvider && aiModel === undefined && !aiApiKey) {
+	if (!aiProvider && aiModel === undefined && !aiApiKey && defaultWebhookUrl === undefined && defaultMinScore === undefined) {
 		return c.json({ success: true });
 	}
 
@@ -127,6 +135,13 @@ settingsRoutes.openapi(updateSettingsRoute, async (c) => {
 		logger.security("api_key_updated", { userId, ip });
 	}
 
+	if (defaultWebhookUrl !== undefined) {
+		updateData.defaultWebhookUrl = defaultWebhookUrl;
+	}
+	if (defaultMinScore !== undefined) {
+		updateData.defaultMinScore = defaultMinScore;
+	}
+
 	await db.update(users).set(updateData).where(eq(users.id, userId));
 
 	return c.json({ success: true });
@@ -153,4 +168,59 @@ settingsRoutes.openapi(changePasswordRoute, async (c) => {
 	logger.security("password_changed", { userId });
 
 	return c.json({ success: true });
+});
+
+settingsRoutes.openapi(webhookTestRoute, async (c) => {
+	const { url } = c.req.valid("json");
+	const isDev = process.env.NODE_ENV !== "production";
+
+	const urlCheck = validateWebhookUrl(url, isDev);
+	if (!urlCheck.valid) {
+		return c.json({ error: urlCheck.reason ?? "URL invalide" }, 400);
+	}
+
+	const ipCheck = await validateWebhookIp(new URL(url).hostname);
+	if (!ipCheck.valid) {
+		return c.json({ error: ipCheck.reason ?? "URL invalide" }, 400);
+	}
+
+	const testPayload: WebhookPayload = {
+		title: "Test BonPlan Webhook",
+		price: 29900,
+		priceFormatted: "299.00 EUR",
+		score: 85,
+		verdict: "• Ceci est un test\n• Webhook configuré avec succès",
+		url: "https://www.leboncoin.fr/test",
+		image: null,
+		searchQuery: "test",
+		marketPriceLow: 27000,
+		marketPriceHigh: 32000,
+		location: "Paris",
+		redFlags: [],
+	};
+
+	const body = isDiscordWebhookUrl(url)
+		? buildDiscordWebhookPayload(testPayload)
+		: testPayload;
+
+	try {
+		const res = await fetch(url, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
+			signal: AbortSignal.timeout(10000),
+			redirect: "error",
+		});
+
+		if (!res.ok) {
+			return c.json({ error: "Webhook injoignable", details: `HTTP ${res.status}` }, 502);
+		}
+
+		return c.json({ success: true }, 200);
+	} catch (err) {
+		return c.json({
+			error: "Webhook injoignable",
+			details: err instanceof Error ? err.message : String(err),
+		}, 502);
+	}
 });
