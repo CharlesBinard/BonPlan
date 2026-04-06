@@ -1,7 +1,7 @@
 import type { GeocodedLocation } from "@bonplan/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2Icon, MapPinIcon, XIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { api } from "@/config/api";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ function useLocationSearch(debouncedQuery: string) {
 			api<{ results: GeocodedLocation[] }>(`/api/geocode/search?q=${encodeURIComponent(debouncedQuery)}&limit=5`),
 		enabled: debouncedQuery.length >= 2,
 		staleTime: 5 * 60 * 1000, // 5 min cache
+		retry: 1,
 	});
 }
 
@@ -30,14 +31,17 @@ function formatLocation(loc: GeocodedLocation): string {
 	return `${loc.city} (${loc.postcode})`;
 }
 
-export function LocationAutocomplete({
+function LocationAutocomplete({
 	value,
 	onChange,
 	placeholder = "ex: Paris, 75001...",
 	disabled,
-	id,
+	id: idProp,
 	className,
 }: LocationAutocompleteProps) {
+	const fallbackId = useId();
+	const id = idProp ?? fallbackId;
+
 	const [inputValue, setInputValue] = useState(value ? formatLocation(value) : "");
 	const [debouncedQuery, setDebouncedQuery] = useState("");
 	const [isOpen, setIsOpen] = useState(false);
@@ -46,11 +50,9 @@ export function LocationAutocomplete({
 	const inputRef = useRef<HTMLInputElement>(null);
 	const listRef = useRef<HTMLUListElement>(null);
 
-	// Sync input value when external value changes
+	// Sync input value when external value changes (including reset to null)
 	useEffect(() => {
-		if (value) {
-			setInputValue(formatLocation(value));
-		}
+		setInputValue(value ? formatLocation(value) : "");
 	}, [value]);
 
 	// Debounce
@@ -67,12 +69,12 @@ export function LocationAutocomplete({
 	const { data, isLoading, isError } = useLocationSearch(debouncedQuery);
 	const results = data?.results ?? [];
 
-	// Open dropdown when we have results or loading/error state
+	// Open dropdown when debounced query is ready
 	useEffect(() => {
 		if (debouncedQuery.length >= 2 && !value) {
 			setIsOpen(true);
 		}
-	}, [debouncedQuery, results, isLoading, value]);
+	}, [debouncedQuery, value]);
 
 	// Close on click outside
 	useEffect(() => {
@@ -103,7 +105,6 @@ export function LocationAutocomplete({
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newValue = e.target.value;
 		setInputValue(newValue);
-		// If user edits after selection, clear the structured value
 		if (value) {
 			onChange(null);
 		}
@@ -142,6 +143,10 @@ export function LocationAutocomplete({
 				setIsOpen(false);
 				setHighlightedIndex(-1);
 				break;
+			case "Tab":
+				setIsOpen(false);
+				setHighlightedIndex(-1);
+				break;
 			case "Home":
 				e.preventDefault();
 				setHighlightedIndex(0);
@@ -163,8 +168,19 @@ export function LocationAutocomplete({
 
 	const showDropdown = isOpen && !value && debouncedQuery.length >= 2;
 
+	// Screen reader status message
+	const statusMessage = isLoading
+		? "Recherche en cours..."
+		: isError
+			? "Erreur de recherche"
+			: results.length > 0
+				? `${results.length} résultat${results.length > 1 ? "s" : ""} disponible${results.length > 1 ? "s" : ""}`
+				: debouncedQuery.length >= 2
+					? "Aucun résultat"
+					: "";
+
 	return (
-		<div ref={containerRef} className="relative">
+		<div ref={containerRef} data-slot="location-autocomplete" className="relative">
 			<div className="relative">
 				<input
 					ref={inputRef}
@@ -173,10 +189,12 @@ export function LocationAutocomplete({
 					role="combobox"
 					aria-expanded={showDropdown}
 					aria-autocomplete="list"
-					aria-controls={id ? `${id}-listbox` : undefined}
+					aria-haspopup="listbox"
+					aria-controls={`${id}-listbox`}
 					aria-activedescendant={
-						highlightedIndex >= 0 && id ? `${id}-option-${highlightedIndex}` : undefined
+						highlightedIndex >= 0 ? `${id}-option-${highlightedIndex}` : undefined
 					}
+					aria-busy={isLoading}
 					value={inputValue}
 					onChange={handleInputChange}
 					onKeyDown={handleKeyDown}
@@ -188,20 +206,20 @@ export function LocationAutocomplete({
 					placeholder={placeholder}
 					disabled={disabled}
 					className={cn(
-						"h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 pr-8 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30",
+						"h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 pr-8 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30",
 						className,
 					)}
 				/>
 				{/* Right icon: spinner, clear button, or nothing */}
 				<div className="absolute right-2 top-1/2 -translate-y-1/2">
 					{isLoading && !value && (
-						<Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+						<Loader2Icon className="size-4 animate-spin text-muted-foreground" aria-hidden="true" />
 					)}
-					{value && (
+					{value && !disabled && (
 						<button
 							type="button"
 							onClick={clearSelection}
-							className="text-muted-foreground hover:text-foreground transition-colors"
+							className="flex items-center justify-center size-6 -m-1 text-muted-foreground hover:text-foreground transition-colors"
 							aria-label="Effacer la localisation"
 						>
 							<XIcon className="size-4" />
@@ -210,19 +228,24 @@ export function LocationAutocomplete({
 				</div>
 			</div>
 
+			{/* Screen reader live region */}
+			<div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+				{showDropdown ? statusMessage : ""}
+			</div>
+
 			{/* Dropdown */}
 			{showDropdown && (
 				<ul
 					ref={listRef}
-					id={id ? `${id}-listbox` : undefined}
+					id={`${id}-listbox`}
 					role="listbox"
 					className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md"
 				>
 					{results.length > 0 &&
 						results.map((loc, i) => (
 							<li
-								key={`${loc.city}-${loc.postcode}`}
-								id={id ? `${id}-option-${i}` : undefined}
+								key={`${loc.city}-${loc.postcode}-${i}`}
+								id={`${id}-option-${i}`}
 								role="option"
 								aria-selected={highlightedIndex === i}
 								className={cn(
@@ -232,7 +255,7 @@ export function LocationAutocomplete({
 										: "text-muted-foreground hover:bg-accent/50",
 								)}
 								onMouseDown={(e) => {
-									e.preventDefault(); // Prevent input blur
+									e.preventDefault();
 									selectLocation(loc);
 								}}
 								onMouseEnter={() => setHighlightedIndex(i)}
@@ -258,3 +281,5 @@ export function LocationAutocomplete({
 		</div>
 	);
 }
+
+export { LocationAutocomplete };
