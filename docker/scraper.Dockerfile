@@ -14,10 +14,12 @@ RUN bun install --frozen-lockfile && rm -rf /root/.bun/install/cache
 FROM node:22-alpine AS final
 WORKDIR /app
 COPY --from=deps /app/node_modules node_modules/
+COPY --from=deps /app/packages/scraper/node_modules packages/scraper/node_modules/
 COPY --from=deps /app/package.json ./
 COPY tsconfig.base.json ./
 COPY packages/shared/ packages/shared/
 COPY packages/ai/ packages/ai/
 COPY packages/scraper/ packages/scraper/
+RUN npm install -g tsx
 WORKDIR /app/packages/scraper
 CMD ["node", "--import", "tsx", "src/index.ts"]
