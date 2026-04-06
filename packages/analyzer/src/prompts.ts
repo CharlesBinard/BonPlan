@@ -78,9 +78,12 @@ Apply the score using this calibration:
 | 0-29 | Poor / no match | Significantly overpriced, wrong item, SYSTEM when STANDALONE wanted |
 
 **Scoring guidelines:**
-- A STANDALONE match at or below market price should score **at least 65-75**
+- The score is PRIMARILY about price vs market value. A cheap listing with a bad description scores HIGHER than an expensive listing with a great description.
+- A STANDALONE match at market price should score **65-75** regardless of listing quality
 - A STANDALONE match 10-20% below market should score **75-85**
-- A STANDALONE match 20%+ below market or new-in-box at used price should score **85-95**
+- A STANDALONE match 20%+ below market should score **85-95**
+- Listing quality signals (detailed title, "état neuf", "boîte d'origine", many photos) can adjust by **±5 points max** — they DO NOT justify jumping to a higher score bracket
+- Two listings of the same product at similar prices MUST have similar scores (within ±5), even if one has a better description
 - Only penalize below 60 if there are real concerns (overpriced, missing photos, suspicious)
 - Empty descriptions are NORMAL on LeBonCoin (search results don't include descriptions). Do NOT add "description vide" or "pas de description" to redFlags. Do NOT penalize for empty descriptions. Only flag real concerns (suspicious price, no photos, scam indicators).
 
@@ -88,29 +91,37 @@ Apply the score using this calibration:
 
 Example 1 — STANDALONE, exceptional deal:
 Query: "5950x". Title: "AMD Ryzen 9 5950X – NEUF sous blister". Price: 250 EUR.
-→ STANDALONE. Market used: 270-320 EUR. New sealed at 250 EUR is ~20% below used market. Score: 88.
+→ STANDALONE. Market used: 270-320 EUR. New sealed at 250 EUR is ~15% below market midpoint. Score: 82.
 
 Example 2 — STANDALONE, good deal:
 Query: "5950x". Title: "Processeur ryzen 9 5950x". Price: 250 EUR. 1 photo, no description.
-→ STANDALONE. Market used: 270-320 EUR. At lower end of market. Score: 78. Sparse listing but price is good.
+→ STANDALONE. Market used: 270-320 EUR. At lower end of market. Score: 78. Sparse listing but price is good. Similar price to Example 1, so similar score (within ±5).
 
-Example 3 — STANDALONE, fair:
+Example 3 — STANDALONE, fair (detailed listing):
+Query: "5950x". Title: "AMD Ryzen 9 5950X – État Neuf – Boîte d'origine – Jamais Overclocké". Price: 295 EUR. Good photos, detailed description.
+→ STANDALONE. Market used: 270-320 EUR. At market midpoint (~295 EUR). Great listing quality but price is NOT below market. Score: 72. The detailed description and "état neuf" add +3-4 points, but cannot push above 75 since the price is at market.
+
+Example 4 — STANDALONE, fair (minimal listing):
+Query: "5950x". Title: "Processeur AMD - ryzen 9 5950x". Price: 290 EUR. 1 photo.
+→ STANDALONE. Market used: 270-320 EUR. Slightly below midpoint. Score: 73. Sparse listing but price is slightly better than Example 3. Both Examples 3 and 4 have similar prices, so they MUST have similar scores.
+
+Example 5 — STANDALONE, fair (at market):
 Query: "5950x". Title: "Amd Ryzen 9 5950X". Price: 300 EUR. Good photos.
 → STANDALONE. Market used: 270-320 EUR. Mid-market price. Score: 68. Correct price, nothing exceptional.
 
-Example 4 — STANDALONE, overpriced:
+Example 6 — STANDALONE, overpriced:
 Query: "5950x". Title: "AMD Ryzen 9 5950X". Price: 480 EUR.
 → STANDALONE but overpriced. Market used: 270-320 EUR. Score: 35. Way above market.
 
-Example 5 — SYSTEM, rejected:
+Example 7 — SYSTEM, rejected:
 Query: "5950x". Title: "PC Gamer Ryzen 9 5950X RTX 3080 32Go". Price: 1800 EUR.
 → SYSTEM. matchesQuery=false. Score: 10. User wants a CPU, not a PC.
 
-Example 6 — BUNDLE, edge case:
+Example 8 — BUNDLE, edge case:
 Query: "5950x". Title: "Setup AMD RYZEN 9 5950X + RAM + CM + ALIM + SSD". Price: 445 EUR.
 → BUNDLE (CPU + motherboard + RAM + PSU + SSD). matchesQuery=false. Score: 15. User wants CPU alone.
 
-Example 7 — ACCESSORY, rejected:
+Example 9 — ACCESSORY, rejected:
 Query: "5950x". Title: "Ventirad Noctua NH-D15 compatible AM4". Price: 55 EUR.
 → ACCESSORY. matchesQuery=false. Score: 5.
 
