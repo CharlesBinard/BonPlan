@@ -5,11 +5,13 @@ import {
 	ChevronUpIcon,
 	ExternalLinkIcon,
 	HeartIcon,
+	ImageIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { type ListingDetailAnalysis, useListing, useToggleFavorite } from "@/api";
 import { ScoreBar } from "@/components/ScoreBar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -134,7 +136,11 @@ const ListingDetailPage = () => {
 			<div className="flex flex-col gap-2">
 				<h2 className="text-sm font-medium text-muted-foreground">Analyse</h2>
 				<ScoreBar score={analysis?.score ?? null} />
-
+				{analysis?.imageAnalysis && (
+					<p className="text-xs text-muted-foreground">
+						Score ajusté par l'analyse d'images (original: {analysis.imageAnalysis.originalScore})
+					</p>
+				)}
 				{analysis?.verdict && <p className="font-semibold">{analysis.verdict}</p>}
 			</div>
 
@@ -209,6 +215,36 @@ const ListingDetailPage = () => {
 							</span>
 						))}
 					</div>
+				</div>
+			)}
+
+			{/* Image Analysis */}
+			{analysis?.imageAnalysis && (
+				<div className="flex flex-col gap-2">
+					<h2 className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+						<ImageIcon className="size-3.5" />
+						Analyse des images
+						{analysis.imageAnalysis.scoreAdjustment !== 0 && (
+							<Badge
+								variant={analysis.imageAnalysis.scoreAdjustment > 0 ? "default" : "destructive"}
+								className="ml-1 text-[10px]"
+							>
+								{analysis.imageAnalysis.scoreAdjustment > 0 ? "+" : ""}
+								{analysis.imageAnalysis.scoreAdjustment}
+							</Badge>
+						)}
+					</h2>
+					<p className="text-sm text-muted-foreground">{analysis.imageAnalysis.condition}</p>
+					{analysis.imageAnalysis.findings.length > 0 && (
+						<ul className="space-y-1">
+							{analysis.imageAnalysis.findings.map((finding: string, i: number) => (
+								<li key={i} className="text-sm flex items-start gap-1.5">
+									<span className="text-muted-foreground mt-0.5">•</span>
+									<span>{finding}</span>
+								</li>
+							))}
+						</ul>
+					)}
 				</div>
 			)}
 
