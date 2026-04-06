@@ -7,13 +7,14 @@ import {
 } from "@bonplan/shared/ai-models";
 import {
 	AlertCircleIcon,
+	BellIcon,
 	CheckCircle2Icon,
 	CpuIcon,
 	Loader2Icon,
 	LockIcon,
 	ShieldCheckIcon,
-	WebhookIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import {
 	type UpdateSettingsBody,
@@ -38,7 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ApiError } from "@/config/api";
+import { api, ApiError } from "@/config/api";
 import { passwordChangeSchema } from "@/forms/schemas";
 
 // ── Reusable form field wrapper with validation styling ──────────────
@@ -331,21 +332,92 @@ const AiConfigTab = () => {
 	);
 };
 
-// ── Webhooks Tab ─────────────────────────────────────────────────────
-const WebhooksTab = () => (
-	<Card>
-		<CardHeader>
-			<CardTitle>Webhooks</CardTitle>
-			<CardDescription>Recevez des notifications HTTP lors de la découverte de bonnes affaires.</CardDescription>
-		</CardHeader>
-		<CardContent>
-			<p className="text-sm text-muted-foreground">
-				Les webhooks se configurent par recherche. Dans la page d'une recherche, vous pourrez définir une URL de webhook
-				qui recevra les alertes en temps réel.
-			</p>
-		</CardContent>
-	</Card>
-);
+// ── Notifications Tab ────────────────────────────────────────────────
+const NotificationsTab = () => {
+	const { data: settings, isLoading } = useSettings();
+	const updateSettings = useUpdateSettings();
+	const [webhookUrl, setWebhookUrl] = useState("");
+	const [minScore, setMinScore] = useState("70");
+	const [testing, setTesting] = useState(false);
+
+	useEffect(() => {
+		if (settings) {
+			setWebhookUrl(settings.defaultWebhookUrl ?? "");
+			setMinScore(String(settings.defaultMinScore ?? 70));
+		}
+	}, [settings]);
+
+	if (isLoading) return <Skeleton className="h-64 w-full" />;
+
+	const handleSave = async () => {
+		await updateSettings.mutateAsync({
+			data: {
+				defaultWebhookUrl: webhookUrl || null,
+				defaultMinScore: Number(minScore) || null,
+			},
+		});
+	};
+
+	const handleTest = async () => {
+		if (!webhookUrl) return;
+		setTesting(true);
+		try {
+			await api("/api/settings/webhook-test", { method: "POST", body: { url: webhookUrl } });
+			toast.success("Test réussi ! Vérifiez la réception.");
+		} catch (err) {
+			toast.error(err instanceof ApiError ? (err.data.error as string) : "Erreur lors du test");
+		} finally {
+			setTesting(false);
+		}
+	};
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle>Notifications Webhook</CardTitle>
+				<CardDescription>
+					URL par défaut pour les nouvelles recherches. Compatible Discord webhook.
+				</CardDescription>
+			</CardHeader>
+			<CardContent className="flex flex-col gap-4">
+				<div className="flex flex-col gap-1.5">
+					<Label htmlFor="defaultWebhookUrl">URL Webhook</Label>
+					<div className="flex gap-2">
+						<Input
+							id="defaultWebhookUrl"
+							placeholder="https://discord.com/api/webhooks/..."
+							value={webhookUrl}
+							onChange={(e) => setWebhookUrl(e.target.value)}
+							className="flex-1"
+						/>
+						<Button variant="outline" size="sm" onClick={handleTest} disabled={!webhookUrl || testing}>
+							{testing ? <Loader2Icon className="animate-spin size-4" /> : "Tester"}
+						</Button>
+					</div>
+					<p className="text-[11px] text-muted-foreground">
+						Discord webhook (discord.com/api/webhooks/...) ou URL custom HTTPS
+					</p>
+				</div>
+				<div className="flex flex-col gap-1.5">
+					<Label htmlFor="defaultMinScore">Score minimum par défaut</Label>
+					<Input
+						id="defaultMinScore"
+						type="number"
+						min={0}
+						max={100}
+						value={minScore}
+						onChange={(e) => setMinScore(e.target.value)}
+					/>
+					<p className="text-[11px] text-muted-foreground">Seuil de notification (0-100)</p>
+				</div>
+				<Button onClick={handleSave} disabled={updateSettings.isPending}>
+					{updateSettings.isPending && <Loader2Icon className="animate-spin" />}
+					Sauvegarder
+				</Button>
+			</CardContent>
+		</Card>
+	);
+};
 
 // ── Password Tab ─────────────────────────────────────────────────────
 const PasswordTab = () => {
@@ -460,9 +532,9 @@ const SettingsPage = () => (
 					<CpuIcon className="size-4" />
 					Configuration IA
 				</TabsTrigger>
-				<TabsTrigger value="webhooks">
-					<WebhookIcon className="size-4" />
-					Webhooks
+				<TabsTrigger value="notifications">
+					<BellIcon className="size-4" />
+					Notifications
 				</TabsTrigger>
 				<TabsTrigger value="password">
 					<LockIcon className="size-4" />
@@ -472,8 +544,8 @@ const SettingsPage = () => (
 			<TabsContent value="ai-config">
 				<AiConfigTab />
 			</TabsContent>
-			<TabsContent value="webhooks">
-				<WebhooksTab />
+			<TabsContent value="notifications">
+				<NotificationsTab />
 			</TabsContent>
 			<TabsContent value="password">
 				<PasswordTab />
