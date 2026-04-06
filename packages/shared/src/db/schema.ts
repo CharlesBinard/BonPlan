@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
 	boolean,
 	check,
+	doublePrecision,
 	index,
 	integer,
 	jsonb,
@@ -98,6 +99,9 @@ export const searches = pgTable(
 			.references(() => users.id, { onDelete: "cascade" }),
 		query: text("query").notNull(),
 		location: text("location").notNull().default(""),
+		postcode: text("postcode"),
+		latitude: doublePrecision("latitude"),
+		longitude: doublePrecision("longitude"),
 		radiusKm: integer("radius_km").notNull(),
 		intervalMin: integer("interval_min").notNull().default(15),
 		aiContext: jsonb("ai_context"),
@@ -121,6 +125,9 @@ export const searches = pgTable(
 		index("searches_user_id_idx").on(table.userId),
 		check("min_score_range", sql`${table.minScore} BETWEEN 0 AND 100`),
 		check("interval_min_minimum", sql`${table.intervalMin} >= 5`),
+		check("latitude_range", sql`${table.latitude} IS NULL OR ${table.latitude} BETWEEN -90 AND 90`),
+		check("longitude_range", sql`${table.longitude} IS NULL OR ${table.longitude} BETWEEN -180 AND 180`),
+		check("lat_lon_both_or_neither", sql`(${table.latitude} IS NULL) = (${table.longitude} IS NULL)`),
 	],
 );
 
