@@ -8,7 +8,9 @@ import {
 	SearchIcon,
 	SlidersHorizontalIcon,
 } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
+import type { GeocodedLocation } from "@bonplan/shared";
+import { LocationAutocomplete } from "@/components/ui/location-autocomplete";
 import { useCreateSearch, useSearches } from "@/api";
 import { SearchCard } from "@/components/SearchCard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -80,7 +82,7 @@ const SearchCreateDialog = () => {
 	const createSearch = useCreateSearch();
 	const [open, setOpen] = useState(false);
 	const [query, setQuery] = useState("");
-	const [location, setLocation] = useState("");
+	const [selectedLocation, setSelectedLocation] = useState<GeocodedLocation | null>(null);
 	const [radiusKm, setRadiusKm] = useState("30");
 	const [intervalMin, setIntervalMin] = useState("15");
 	const [minScore, setMinScore] = useState("70");
@@ -88,9 +90,21 @@ const SearchCreateDialog = () => {
 	const [nationWide, setNationWide] = useState(false);
 	const [allowBundles, setAllowBundles] = useState(false);
 
+	const locationRef = useRef<HTMLDivElement>(null);
+
+	// Auto-focus location input when "Toute la France" is toggled off
+	useEffect(() => {
+		if (!nationWide) {
+			setTimeout(() => {
+				const input = locationRef.current?.querySelector("input");
+				input?.focus();
+			}, 50);
+		}
+	}, [nationWide]);
+
 	const reset = () => {
 		setQuery("");
-		setLocation("");
+		setSelectedLocation(null);
 		setRadiusKm("30");
 		setIntervalMin("15");
 		setMinScore("70");
@@ -103,7 +117,10 @@ const SearchCreateDialog = () => {
 		e.preventDefault();
 		const result = searchCreateSchema.safeParse({
 			query,
-			location: nationWide ? "" : location,
+			location: nationWide ? "" : (selectedLocation?.city ?? ""),
+			postcode: nationWide ? null : (selectedLocation?.postcode ?? null),
+			latitude: nationWide ? null : (selectedLocation?.latitude ?? null),
+			longitude: nationWide ? null : (selectedLocation?.longitude ?? null),
 			radiusKm: nationWide ? 30 : Number(radiusKm),
 			intervalMin: Number(intervalMin),
 			minScore: Number(minScore),
@@ -126,7 +143,7 @@ const SearchCreateDialog = () => {
 
 	// Validation state
 	const queryValid = query.length >= 3;
-	const locationValid = nationWide || location.length > 0;
+	const locationValid = nationWide || selectedLocation !== null;
 	const intervalNum = Number(intervalMin);
 	const scoreNum = Number(minScore);
 	const intervalValid = !Number.isNaN(intervalNum) && intervalNum >= 5 && intervalNum <= 1440;
@@ -177,21 +194,22 @@ const SearchCreateDialog = () => {
 					</div>
 
 					{!nationWide && (
-						<FormField
-							label="Localisation"
-							htmlFor="location"
-							required
-							error={fieldErrors.location}
-							valid={location.length > 0}
-							helpText="Ville ou code postal"
-						>
-							<Input
-								id="location"
-								placeholder="ex: Paris, Etampes..."
-								value={location}
-								onChange={(e) => setLocation(e.target.value)}
-							/>
-						</FormField>
+						<div ref={locationRef}>
+							<FormField
+								label="Localisation"
+								htmlFor="location"
+								required
+								error={fieldErrors.location}
+								valid={selectedLocation !== null}
+								helpText="Ville ou code postal"
+							>
+								<LocationAutocomplete
+									id="location"
+									value={selectedLocation}
+									onChange={setSelectedLocation}
+								/>
+							</FormField>
+						</div>
 					)}
 
 					<Separator />
@@ -266,8 +284,11 @@ const SearchCreateDialog = () => {
 						<div className="flex items-center gap-2">
 							<span className="text-muted-foreground">Lieu :</span>
 							<span className="font-medium">
-								{nationWide ? "Toute la France" : location || "..."}
-								{!nationWide && radiusKm && location && ` (${radiusKm} km)`}
+								{nationWide
+									? "Toute la France"
+									: selectedLocation
+										? `${selectedLocation.city} (${selectedLocation.postcode})${radiusKm ? ` (${radiusKm} km)` : ""}`
+										: "..."}
 							</span>
 						</div>
 						<div className="flex flex-wrap gap-1.5 mt-1">
