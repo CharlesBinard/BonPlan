@@ -13,17 +13,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
     && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
     && apt-get update && apt-get install -y --no-install-recommends google-chrome-stable \
-    && apt-get purge -y wget gnupg \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Non-root user for Chrome
-RUN groupadd -r chrome && useradd -r -g chrome -G audio,video chrome
-RUN mkdir -p /data/browser-profile && chown -R chrome:chrome /data
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
-USER chrome
 
 EXPOSE 9222
 
