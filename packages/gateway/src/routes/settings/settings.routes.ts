@@ -18,10 +18,6 @@ export const changePasswordSchema = z.object({
 	newPassword: passwordSchema,
 });
 
-export const discordLinkSchema = z.object({
-	code: z.string().length(6),
-});
-
 export const getSettingsRoute = createRoute({
 	method: "get",
 	path: "/",
@@ -38,8 +34,6 @@ export const getSettingsRoute = createRoute({
 						maskedApiKey: z.string().nullable(),
 						aiProvider: z.string(),
 						aiModel: z.string().nullable(),
-						discordLinked: z.boolean(),
-						discordUserId: z.string().nullable(),
 					}),
 				},
 			},
@@ -101,71 +95,6 @@ export const changePasswordRoute = createRoute({
 		400: {
 			description: "Failed to change password",
 			content: { "application/json": { schema: validationErrorSchema } },
-		},
-	},
-});
-
-export const discordLinkRoute = createRoute({
-	method: "post",
-	path: "/discord/link",
-	tags: ["Settings"],
-	responses: {
-		200: {
-			description: "Discord linking code generated",
-			content: { "application/json": { schema: z.object({ code: z.string() }) } },
-		},
-		429: {
-			description: "Rate limited",
-			content: {
-				"application/json": {
-					schema: z.object({ error: z.string(), retryAfterSeconds: z.number() }),
-				},
-			},
-		},
-	},
-});
-
-export const discordVerifyRoute = createRoute({
-	method: "post",
-	path: "/discord/verify",
-	tags: ["Settings"],
-	request: {
-		body: {
-			content: { "application/json": { schema: discordLinkSchema } },
-		},
-	},
-	responses: {
-		200: {
-			description: "Discord account linked",
-			content: {
-				"application/json": {
-					schema: z.object({ data: z.object({ linked: z.boolean(), discordUserId: z.string() }) }),
-				},
-			},
-		},
-		400: {
-			description: "Invalid or expired code",
-			content: { "application/json": { schema: z.object({ error: z.string() }) } },
-		},
-		409: {
-			description: "Already linked",
-			content: { "application/json": { schema: z.object({ error: z.string() }) } },
-		},
-	},
-});
-
-export const discordUnlinkRoute = createRoute({
-	method: "post",
-	path: "/discord/unlink",
-	tags: ["Settings"],
-	responses: {
-		200: {
-			description: "Discord account unlinked",
-			content: { "application/json": { schema: z.object({ success: z.boolean() }) } },
-		},
-		404: {
-			description: "Discord account not linked",
-			content: { "application/json": { schema: z.object({ error: z.string() }) } },
 		},
 	},
 });

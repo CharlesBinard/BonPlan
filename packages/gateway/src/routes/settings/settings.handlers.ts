@@ -1,16 +1,12 @@
-import { randomBytes } from "node:crypto";
-import { createLogger, discordLinks, encrypt, users } from "@bonplan/shared";
+import { createLogger, encrypt, users } from "@bonplan/shared";
 import { isValidModel, type ProviderType } from "@bonplan/shared/ai-models";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 import { auth } from "../../lib/auth";
-import { config, db, redis } from "../../lib/db";
+import { config, db } from "../../lib/db";
 import type { AuthEnv } from "../../middleware/auth";
 import {
 	changePasswordRoute,
-	discordLinkRoute,
-	discordUnlinkRoute,
-	discordVerifyRoute,
 	getSettingsRoute,
 	updateSettingsRoute,
 } from "./settings.routes";
@@ -38,11 +34,6 @@ settingsRoutes.openapi(getSettingsRoute, async (c) => {
 		return c.json({ error: "User not found" }, 404);
 	}
 
-	const [discordLink] = await db
-		.select({ discordUserId: discordLinks.discordUserId })
-		.from(discordLinks)
-		.where(eq(discordLinks.userId, userId));
-
 	const hasApiKey = !!user.aiApiKeyEncrypted;
 	// Use a static mask — we cannot safely show plaintext chars without decrypting
 	const maskedApiKey: string | null = hasApiKey ? "••••••••••••" : null;
@@ -54,8 +45,6 @@ settingsRoutes.openapi(getSettingsRoute, async (c) => {
 		maskedApiKey,
 		aiProvider: user.aiProvider,
 		aiModel: user.aiModel ?? null,
-		discordLinked: !!discordLink,
-		discordUserId: discordLink?.discordUserId ?? null,
 	});
 });
 
@@ -162,78 +151,6 @@ settingsRoutes.openapi(changePasswordRoute, async (c) => {
 	}
 
 	logger.security("password_changed", { userId });
-
-	return c.json({ success: true });
-});
-
-// @ts-expect-error: openapi handler strict typing vs actual return types
-settingsRoutes.openapi(discordLinkRoute, async (c) => {
-	const userId = c.get("userId");
-
-	const rateLimitKey = `discord-link-rate:${userId}`;
-	const current = await redis.incr(rateLimitKey);
-
-	if (current === 1) {
-		// First request in window — set TTL of 1 hour
-		await redis.expire(rateLimitKey, 3600);
-	}
-
-	if (current > 3) {
-		const ttl = await redis.ttl(rateLimitKey);
-		return c.json({ error: "Rate limited. Try again later.", retryAfterSeconds: ttl }, 429);
-	}
-
-	const code = randomBytes(4).toString("hex").substring(0, 6).toUpperCase();
-	const codeKey = `discord-link-code:${code}`;
-
-	// Store userId under this code with 5 min TTL
-	await redis.set(codeKey, userId, "EX", 300);
-
-	return c.json({ code });
-});
-
-// @ts-expect-error: openapi handler strict typing vs actual return types
-settingsRoutes.openapi(discordVerifyRoute, async (c) => {
-	const userId = c.get("userId");
-	const body = c.req.valid("json");
-
-	// Look up bot-generated code -> discordUserId
-	const codeKey = `discord-link-bot:${body.code}`;
-	const discordUserId = await redis.get(codeKey);
-	if (!discordUserId) {
-		return c.json({ error: "invalid_or_expired_code" }, 400);
-	}
-
-	// Delete code (one-time use)
-	await redis.del(codeKey);
-
-	// Create link
-	const [link] = await db.insert(discordLinks).values({ userId, discordUserId }).onConflictDoNothing().returning();
-
-	if (!link) {
-		return c.json({ error: "already_linked" }, 409);
-	}
-
-	logger.security("discord_linked", { userId, discordUserId });
-	return c.json({ data: { linked: true, discordUserId } });
-});
-
-// @ts-expect-error: openapi handler strict typing vs actual return types
-settingsRoutes.openapi(discordUnlinkRoute, async (c) => {
-	const userId = c.get("userId");
-
-	const [link] = await db
-		.select({ discordUserId: discordLinks.discordUserId })
-		.from(discordLinks)
-		.where(eq(discordLinks.userId, userId));
-
-	if (!link) {
-		return c.json({ error: "Discord account not linked" }, 404);
-	}
-
-	await db.delete(discordLinks).where(eq(discordLinks.userId, userId));
-
-	logger.security("discord_unlinked", { userId, discordUserId: link.discordUserId });
 
 	return c.json({ success: true });
 });

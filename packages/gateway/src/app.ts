@@ -3,12 +3,10 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { apiReference } from "@scalar/hono-api-reference";
 import { auth } from "./lib/auth";
 import { requireAuth } from "./middleware/auth";
-import { discordServiceAuth } from "./middleware/discord-service";
 import { handleError } from "./middleware/error-handler";
 import { ipRateLimit, userRateLimit } from "./middleware/rate-limit";
 import { securityHeaders } from "./middleware/security-headers";
 import { adminRoutes } from "./routes/admin/admin.handlers";
-import { discordApiRoutes } from "./routes/discord/discord.handlers";
 import { favoriteRoutes } from "./routes/favorites/favorites.handlers";
 import { healthRoutes } from "./routes/health/health.routes";
 import { notificationRoutes } from "./routes/notifications/notifications.handlers";
@@ -51,10 +49,6 @@ app.on(["GET", "POST"], "/api/auth/*", async (c) => {
 	mutable.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
 	return mutable;
 });
-
-// Discord bot API routes (service token auth, before requireAuth)
-app.use("/api/discord/*", discordServiceAuth);
-app.route("/api/discord", discordApiRoutes);
 
 // ── Authenticated routes
 app.use("/api/*", requireAuth);
