@@ -24,6 +24,9 @@ export const registerSchema = z
 export const searchCreateSchema = z.object({
 	query: z.string().min(3, "Minimum 3 caractères").max(500),
 	location: z.string().max(500).default(""),
+	postcode: z.string().max(10).optional().nullable(),
+	latitude: z.number().min(-90).max(90).optional().nullable(),
+	longitude: z.number().min(-180).max(180).optional().nullable(),
 	radiusKm: z.number().int().min(1).max(500).default(30),
 	intervalMin: z.number().int().min(5).max(1440).default(15),
 	minScore: z.number().int().min(0).max(100).default(70),
