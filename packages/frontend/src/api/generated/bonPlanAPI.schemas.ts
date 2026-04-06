@@ -41,163 +41,6 @@ export type GetHealth503 = {
   deadLetterDepth: GetHealth503DeadLetterDepth;
 };
 
-export type GetApiDiscordSearches200DataItemStatus = typeof GetApiDiscordSearches200DataItemStatus[keyof typeof GetApiDiscordSearches200DataItemStatus];
-
-
-export const GetApiDiscordSearches200DataItemStatus = {
-  pending: 'pending',
-  mapping: 'mapping',
-  active: 'active',
-  paused: 'paused',
-  blocked: 'blocked',
-} as const;
-
-export type GetApiDiscordSearches200DataItemAiContextPriceRange = {
-  min: number;
-  max: number;
-} | null;
-
-export type GetApiDiscordSearches200DataItemAiContext = {
-  keywordVariations: string[];
-  judgmentCriteria: string;
-  priceRange: GetApiDiscordSearches200DataItemAiContextPriceRange;
-  confidence: number;
-  searchUrls: string[];
-  [key: string]: unknown | null;
-} | null;
-
-export type GetApiDiscordSearches200DataItem = {
-  id: string;
-  userId: string;
-  query: string;
-  location: string;
-  postcode: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  radiusKm: number;
-  intervalMin: number;
-  status: GetApiDiscordSearches200DataItemStatus;
-  aiContext: GetApiDiscordSearches200DataItemAiContext;
-  notifyWebhook: string | null;
-  notifyDiscord: boolean;
-  discordChannelId: string | null;
-  minScore: number;
-  allowBundles: boolean;
-  analyzeImages: boolean;
-  lastScrapedAt: string | null;
-  lastError: string | null;
-  blockedUntil: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type GetApiDiscordSearches200 = {
-  data: GetApiDiscordSearches200DataItem[];
-};
-
-export type PatchApiDiscordSearchesIdBodyStatus = typeof PatchApiDiscordSearchesIdBodyStatus[keyof typeof PatchApiDiscordSearchesIdBodyStatus];
-
-
-export const PatchApiDiscordSearchesIdBodyStatus = {
-  active: 'active',
-  paused: 'paused',
-} as const;
-
-export type PatchApiDiscordSearchesIdBody = {
-  status?: PatchApiDiscordSearchesIdBodyStatus;
-};
-
-export type PatchApiDiscordSearchesId200DataStatus = typeof PatchApiDiscordSearchesId200DataStatus[keyof typeof PatchApiDiscordSearchesId200DataStatus];
-
-
-export const PatchApiDiscordSearchesId200DataStatus = {
-  pending: 'pending',
-  mapping: 'mapping',
-  active: 'active',
-  paused: 'paused',
-  blocked: 'blocked',
-} as const;
-
-export type PatchApiDiscordSearchesId200DataAiContextPriceRange = {
-  min: number;
-  max: number;
-} | null;
-
-export type PatchApiDiscordSearchesId200DataAiContext = {
-  keywordVariations: string[];
-  judgmentCriteria: string;
-  priceRange: PatchApiDiscordSearchesId200DataAiContextPriceRange;
-  confidence: number;
-  searchUrls: string[];
-  [key: string]: unknown | null;
-} | null;
-
-export type PatchApiDiscordSearchesId200Data = {
-  id: string;
-  userId: string;
-  query: string;
-  location: string;
-  postcode: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  radiusKm: number;
-  intervalMin: number;
-  status: PatchApiDiscordSearchesId200DataStatus;
-  aiContext: PatchApiDiscordSearchesId200DataAiContext;
-  notifyWebhook: string | null;
-  notifyDiscord: boolean;
-  discordChannelId: string | null;
-  minScore: number;
-  allowBundles: boolean;
-  analyzeImages: boolean;
-  lastScrapedAt: string | null;
-  lastError: string | null;
-  blockedUntil: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type PatchApiDiscordSearchesId200 = {
-  data: PatchApiDiscordSearchesId200Data;
-};
-
-export type PatchApiDiscordSearchesId400 = {
-  error: string;
-};
-
-export type PatchApiDiscordSearchesId404 = {
-  error: string;
-};
-
-export type DeleteApiDiscordSearchesId200Data = {
-  id: string;
-};
-
-export type DeleteApiDiscordSearchesId200 = {
-  data: DeleteApiDiscordSearchesId200Data;
-};
-
-export type DeleteApiDiscordSearchesId404 = {
-  error: string;
-};
-
-export type PostApiDiscordSearchesIdTrigger200Data = {
-  triggered: boolean;
-};
-
-export type PostApiDiscordSearchesIdTrigger200 = {
-  data: PostApiDiscordSearchesIdTrigger200Data;
-};
-
-export type PostApiDiscordSearchesIdTrigger404 = {
-  error: string;
-};
-
-export type PostApiDiscordSearchesIdTrigger429 = {
-  error: string;
-  retryAfterSeconds: number;
-};
-
 export type GetApiGeocodeSearchParams = {
 /**
  * @minLength 2
@@ -264,8 +107,6 @@ export type GetApiSearches200SearchesItem = {
   status: GetApiSearches200SearchesItemStatus;
   aiContext: GetApiSearches200SearchesItemAiContext;
   notifyWebhook: string | null;
-  notifyDiscord: boolean;
-  discordChannelId: string | null;
   minScore: number;
   allowBundles: boolean;
   analyzeImages: boolean;
@@ -311,8 +152,6 @@ export type PostApiSearchesBody = {
      */
   intervalMin?: number;
   notifyWebhook?: string | null;
-  notifyDiscord?: boolean;
-  discordChannelId?: string | null;
   /**
      * @minimum 0
      * @maximum 100
@@ -360,8 +199,6 @@ export type PostApiSearches201Search = {
   status: PostApiSearches201SearchStatus;
   aiContext: PostApiSearches201SearchAiContext;
   notifyWebhook: string | null;
-  notifyDiscord: boolean;
-  discordChannelId: string | null;
   minScore: number;
   allowBundles: boolean;
   analyzeImages: boolean;
@@ -426,8 +263,6 @@ export type GetApiSearchesId200Search = {
   status: GetApiSearchesId200SearchStatus;
   aiContext: GetApiSearchesId200SearchAiContext;
   notifyWebhook: string | null;
-  notifyDiscord: boolean;
-  discordChannelId: string | null;
   minScore: number;
   allowBundles: boolean;
   analyzeImages: boolean;
@@ -467,8 +302,6 @@ export type PatchApiSearchesIdBody = {
      */
   intervalMin?: number;
   notifyWebhook?: string | null;
-  notifyDiscord?: boolean;
-  discordChannelId?: string | null;
   /**
      * @minimum 0
      * @maximum 100
@@ -515,8 +348,6 @@ export type PatchApiSearchesId200Search = {
   status: PatchApiSearchesId200SearchStatus;
   aiContext: PatchApiSearchesId200SearchAiContext;
   notifyWebhook: string | null;
-  notifyDiscord: boolean;
-  discordChannelId: string | null;
   minScore: number;
   allowBundles: boolean;
   analyzeImages: boolean;
@@ -941,8 +772,8 @@ export type GetApiSettings200 = {
   maskedApiKey: string | null;
   aiProvider: string;
   aiModel: string | null;
-  discordLinked: boolean;
-  discordUserId: string | null;
+  defaultWebhookUrl: string | null;
+  defaultMinScore: number | null;
 };
 
 export type GetApiSettings404 = {
@@ -969,6 +800,12 @@ export type PatchApiSettingsBody = {
   aiApiKey?: string;
   /** @minLength 1 */
   currentPassword?: string;
+  defaultWebhookUrl?: string | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  defaultMinScore?: number | null;
 };
 
 export type PatchApiSettings200 = {
@@ -1009,46 +846,21 @@ export type PatchApiSettingsPassword400 = {
   error: string | (unknown | null)[];
 };
 
-export type PostApiSettingsDiscordLink200 = {
-  code: string;
+export type PostApiSettingsWebhookTestBody = {
+  url: string;
 };
 
-export type PostApiSettingsDiscordLink429 = {
-  error: string;
-  retryAfterSeconds: number;
-};
-
-export type PostApiSettingsDiscordVerifyBody = {
-  /**
-     * @minLength 6
-     * @maxLength 6
-     */
-  code: string;
-};
-
-export type PostApiSettingsDiscordVerify200Data = {
-  linked: boolean;
-  discordUserId: string;
-};
-
-export type PostApiSettingsDiscordVerify200 = {
-  data: PostApiSettingsDiscordVerify200Data;
-};
-
-export type PostApiSettingsDiscordVerify400 = {
-  error: string;
-};
-
-export type PostApiSettingsDiscordVerify409 = {
-  error: string;
-};
-
-export type PostApiSettingsDiscordUnlink200 = {
+export type PostApiSettingsWebhookTest200 = {
   success: boolean;
 };
 
-export type PostApiSettingsDiscordUnlink404 = {
+export type PostApiSettingsWebhookTest400 = {
   error: string;
+};
+
+export type PostApiSettingsWebhookTest502 = {
+  error: string;
+  details?: string;
 };
 
 export type GetApiAdminDeadLetters200DataItem = {

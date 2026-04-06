@@ -30,15 +30,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  DeleteApiDiscordSearchesId200,
-  DeleteApiDiscordSearchesId404,
   DeleteApiFavoritesListingId200,
   DeleteApiFavoritesListingId404,
   DeleteApiSearchesId200,
   DeleteApiSearchesId404,
   GetApiAdminDeadLetters200,
   GetApiAdminDeadLetters403,
-  GetApiDiscordSearches200,
   GetApiFavorites200,
   GetApiGeocodeSearch200,
   GetApiGeocodeSearch502,
@@ -59,10 +56,6 @@ import type {
   GetApiStatsGoodDeals200,
   GetHealth200,
   GetHealth503,
-  PatchApiDiscordSearchesId200,
-  PatchApiDiscordSearchesId400,
-  PatchApiDiscordSearchesId404,
-  PatchApiDiscordSearchesIdBody,
   PatchApiSearchesId200,
   PatchApiSearchesId404,
   PatchApiSearchesId500,
@@ -76,9 +69,6 @@ import type {
   PatchApiSettingsPassword200,
   PatchApiSettingsPassword400,
   PatchApiSettingsPasswordBody,
-  PostApiDiscordSearchesIdTrigger200,
-  PostApiDiscordSearchesIdTrigger404,
-  PostApiDiscordSearchesIdTrigger429,
   PostApiFavoritesListingId201,
   PostApiSearches201,
   PostApiSearches400,
@@ -89,14 +79,10 @@ import type {
   PostApiSearchesIdTrigger403,
   PostApiSearchesIdTrigger404,
   PostApiSearchesIdTrigger429,
-  PostApiSettingsDiscordLink200,
-  PostApiSettingsDiscordLink429,
-  PostApiSettingsDiscordUnlink200,
-  PostApiSettingsDiscordUnlink404,
-  PostApiSettingsDiscordVerify200,
-  PostApiSettingsDiscordVerify400,
-  PostApiSettingsDiscordVerify409,
-  PostApiSettingsDiscordVerifyBody
+  PostApiSettingsWebhookTest200,
+  PostApiSettingsWebhookTest400,
+  PostApiSettingsWebhookTest502,
+  PostApiSettingsWebhookTestBody
 } from './bonPlanAPI.schemas';
 
 import { customFetch } from '../../config/api-mutator';
@@ -285,440 +271,6 @@ export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TErr
 
 
 
-
-export type getApiDiscordSearchesResponse200 = {
-  data: GetApiDiscordSearches200
-  status: 200
-}
-
-export type getApiDiscordSearchesResponseSuccess = (getApiDiscordSearchesResponse200) & {
-  headers: Headers;
-};
-;
-
-export type getApiDiscordSearchesResponse = (getApiDiscordSearchesResponseSuccess)
-
-export const getGetApiDiscordSearchesUrl = () => {
-
-
-
-
-  return `/api/discord/searches`
-}
-
-export const getApiDiscordSearches = async ( options?: RequestInit): Promise<getApiDiscordSearchesResponse> => {
-
-  return customFetch<getApiDiscordSearchesResponse>(getGetApiDiscordSearchesUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetApiDiscordSearchesInfiniteQueryKey = () => {
-    return [
-    'infinite', `/api/discord/searches`
-    ] as const;
-    }
-
-export const getGetApiDiscordSearchesQueryKey = () => {
-    return [
-    `/api/discord/searches`
-    ] as const;
-    }
-
-
-export const getGetApiDiscordSearchesInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof getApiDiscordSearches>>>, TError = unknown>( options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof getApiDiscordSearches>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetApiDiscordSearchesInfiniteQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getApiDiscordSearches>>> = ({ signal }) => getApiDiscordSearches({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof getApiDiscordSearches>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetApiDiscordSearchesInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof getApiDiscordSearches>>>
-export type GetApiDiscordSearchesInfiniteQueryError = unknown
-
-
-export function useGetApiDiscordSearchesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof getApiDiscordSearches>>>, TError = unknown>(
-  options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof getApiDiscordSearches>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getApiDiscordSearches>>,
-          TError,
-          Awaited<ReturnType<typeof getApiDiscordSearches>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetApiDiscordSearchesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof getApiDiscordSearches>>>, TError = unknown>(
-  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof getApiDiscordSearches>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getApiDiscordSearches>>,
-          TError,
-          Awaited<ReturnType<typeof getApiDiscordSearches>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetApiDiscordSearchesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof getApiDiscordSearches>>>, TError = unknown>(
-  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof getApiDiscordSearches>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useGetApiDiscordSearchesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof getApiDiscordSearches>>>, TError = unknown>(
-  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof getApiDiscordSearches>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
- ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getGetApiDiscordSearchesInfiniteQueryOptions(options)
-
-  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-
-
-
-export const getGetApiDiscordSearchesQueryOptions = <TData = Awaited<ReturnType<typeof getApiDiscordSearches>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiDiscordSearches>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetApiDiscordSearchesQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getApiDiscordSearches>>> = ({ signal }) => getApiDiscordSearches({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getApiDiscordSearches>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetApiDiscordSearchesQueryResult = NonNullable<Awaited<ReturnType<typeof getApiDiscordSearches>>>
-export type GetApiDiscordSearchesQueryError = unknown
-
-
-export function useGetApiDiscordSearches<TData = Awaited<ReturnType<typeof getApiDiscordSearches>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiDiscordSearches>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getApiDiscordSearches>>,
-          TError,
-          Awaited<ReturnType<typeof getApiDiscordSearches>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetApiDiscordSearches<TData = Awaited<ReturnType<typeof getApiDiscordSearches>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiDiscordSearches>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getApiDiscordSearches>>,
-          TError,
-          Awaited<ReturnType<typeof getApiDiscordSearches>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetApiDiscordSearches<TData = Awaited<ReturnType<typeof getApiDiscordSearches>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiDiscordSearches>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useGetApiDiscordSearches<TData = Awaited<ReturnType<typeof getApiDiscordSearches>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiDiscordSearches>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getGetApiDiscordSearchesQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-
-
-
-
-export type patchApiDiscordSearchesIdResponse200 = {
-  data: PatchApiDiscordSearchesId200
-  status: 200
-}
-
-export type patchApiDiscordSearchesIdResponse400 = {
-  data: PatchApiDiscordSearchesId400
-  status: 400
-}
-
-export type patchApiDiscordSearchesIdResponse404 = {
-  data: PatchApiDiscordSearchesId404
-  status: 404
-}
-
-export type patchApiDiscordSearchesIdResponseSuccess = (patchApiDiscordSearchesIdResponse200) & {
-  headers: Headers;
-};
-export type patchApiDiscordSearchesIdResponseError = (patchApiDiscordSearchesIdResponse400 | patchApiDiscordSearchesIdResponse404) & {
-  headers: Headers;
-};
-
-export type patchApiDiscordSearchesIdResponse = (patchApiDiscordSearchesIdResponseSuccess | patchApiDiscordSearchesIdResponseError)
-
-export const getPatchApiDiscordSearchesIdUrl = (id: string,) => {
-
-
-
-
-  return `/api/discord/searches/${id}`
-}
-
-export const patchApiDiscordSearchesId = async (id: string,
-    patchApiDiscordSearchesIdBody: PatchApiDiscordSearchesIdBody, options?: RequestInit): Promise<patchApiDiscordSearchesIdResponse> => {
-
-  return customFetch<patchApiDiscordSearchesIdResponse>(getPatchApiDiscordSearchesIdUrl(id),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      patchApiDiscordSearchesIdBody,)
-  }
-);}
-
-
-
-
-export const getPatchApiDiscordSearchesIdMutationOptions = <TError = PatchApiDiscordSearchesId400 | PatchApiDiscordSearchesId404,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchApiDiscordSearchesId>>, TError,{id: string;data: PatchApiDiscordSearchesIdBody}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof patchApiDiscordSearchesId>>, TError,{id: string;data: PatchApiDiscordSearchesIdBody}, TContext> => {
-
-const mutationKey = ['patchApiDiscordSearchesId'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchApiDiscordSearchesId>>, {id: string;data: PatchApiDiscordSearchesIdBody}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  patchApiDiscordSearchesId(id,data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type PatchApiDiscordSearchesIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchApiDiscordSearchesId>>>
-    export type PatchApiDiscordSearchesIdMutationBody = PatchApiDiscordSearchesIdBody
-    export type PatchApiDiscordSearchesIdMutationError = PatchApiDiscordSearchesId400 | PatchApiDiscordSearchesId404
-
-    export const usePatchApiDiscordSearchesId = <TError = PatchApiDiscordSearchesId400 | PatchApiDiscordSearchesId404,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchApiDiscordSearchesId>>, TError,{id: string;data: PatchApiDiscordSearchesIdBody}, TContext>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof patchApiDiscordSearchesId>>,
-        TError,
-        {id: string;data: PatchApiDiscordSearchesIdBody},
-        TContext
-      > => {
-      return useMutation(getPatchApiDiscordSearchesIdMutationOptions(options), queryClient);
-    }
-
-export type deleteApiDiscordSearchesIdResponse200 = {
-  data: DeleteApiDiscordSearchesId200
-  status: 200
-}
-
-export type deleteApiDiscordSearchesIdResponse404 = {
-  data: DeleteApiDiscordSearchesId404
-  status: 404
-}
-
-export type deleteApiDiscordSearchesIdResponseSuccess = (deleteApiDiscordSearchesIdResponse200) & {
-  headers: Headers;
-};
-export type deleteApiDiscordSearchesIdResponseError = (deleteApiDiscordSearchesIdResponse404) & {
-  headers: Headers;
-};
-
-export type deleteApiDiscordSearchesIdResponse = (deleteApiDiscordSearchesIdResponseSuccess | deleteApiDiscordSearchesIdResponseError)
-
-export const getDeleteApiDiscordSearchesIdUrl = (id: string,) => {
-
-
-
-
-  return `/api/discord/searches/${id}`
-}
-
-export const deleteApiDiscordSearchesId = async (id: string, options?: RequestInit): Promise<deleteApiDiscordSearchesIdResponse> => {
-
-  return customFetch<deleteApiDiscordSearchesIdResponse>(getDeleteApiDiscordSearchesIdUrl(id),
-  {
-    ...options,
-    method: 'DELETE'
-
-
-  }
-);}
-
-
-
-
-export const getDeleteApiDiscordSearchesIdMutationOptions = <TError = DeleteApiDiscordSearchesId404,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteApiDiscordSearchesId>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof deleteApiDiscordSearchesId>>, TError,{id: string}, TContext> => {
-
-const mutationKey = ['deleteApiDiscordSearchesId'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteApiDiscordSearchesId>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
-
-          return  deleteApiDiscordSearchesId(id,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeleteApiDiscordSearchesIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteApiDiscordSearchesId>>>
-
-    export type DeleteApiDiscordSearchesIdMutationError = DeleteApiDiscordSearchesId404
-
-    export const useDeleteApiDiscordSearchesId = <TError = DeleteApiDiscordSearchesId404,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteApiDiscordSearchesId>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof deleteApiDiscordSearchesId>>,
-        TError,
-        {id: string},
-        TContext
-      > => {
-      return useMutation(getDeleteApiDiscordSearchesIdMutationOptions(options), queryClient);
-    }
-
-export type postApiDiscordSearchesIdTriggerResponse200 = {
-  data: PostApiDiscordSearchesIdTrigger200
-  status: 200
-}
-
-export type postApiDiscordSearchesIdTriggerResponse404 = {
-  data: PostApiDiscordSearchesIdTrigger404
-  status: 404
-}
-
-export type postApiDiscordSearchesIdTriggerResponse429 = {
-  data: PostApiDiscordSearchesIdTrigger429
-  status: 429
-}
-
-export type postApiDiscordSearchesIdTriggerResponseSuccess = (postApiDiscordSearchesIdTriggerResponse200) & {
-  headers: Headers;
-};
-export type postApiDiscordSearchesIdTriggerResponseError = (postApiDiscordSearchesIdTriggerResponse404 | postApiDiscordSearchesIdTriggerResponse429) & {
-  headers: Headers;
-};
-
-export type postApiDiscordSearchesIdTriggerResponse = (postApiDiscordSearchesIdTriggerResponseSuccess | postApiDiscordSearchesIdTriggerResponseError)
-
-export const getPostApiDiscordSearchesIdTriggerUrl = (id: string,) => {
-
-
-
-
-  return `/api/discord/searches/${id}/trigger`
-}
-
-export const postApiDiscordSearchesIdTrigger = async (id: string, options?: RequestInit): Promise<postApiDiscordSearchesIdTriggerResponse> => {
-
-  return customFetch<postApiDiscordSearchesIdTriggerResponse>(getPostApiDiscordSearchesIdTriggerUrl(id),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-export const getPostApiDiscordSearchesIdTriggerMutationOptions = <TError = PostApiDiscordSearchesIdTrigger404 | PostApiDiscordSearchesIdTrigger429,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiDiscordSearchesIdTrigger>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof postApiDiscordSearchesIdTrigger>>, TError,{id: string}, TContext> => {
-
-const mutationKey = ['postApiDiscordSearchesIdTrigger'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postApiDiscordSearchesIdTrigger>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
-
-          return  postApiDiscordSearchesIdTrigger(id,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type PostApiDiscordSearchesIdTriggerMutationResult = NonNullable<Awaited<ReturnType<typeof postApiDiscordSearchesIdTrigger>>>
-
-    export type PostApiDiscordSearchesIdTriggerMutationError = PostApiDiscordSearchesIdTrigger404 | PostApiDiscordSearchesIdTrigger429
-
-    export const usePostApiDiscordSearchesIdTrigger = <TError = PostApiDiscordSearchesIdTrigger404 | PostApiDiscordSearchesIdTrigger429,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiDiscordSearchesIdTrigger>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof postApiDiscordSearchesIdTrigger>>,
-        TError,
-        {id: string},
-        TContext
-      > => {
-      return useMutation(getPostApiDiscordSearchesIdTriggerMutationOptions(options), queryClient);
-    }
 
 export type getApiGeocodeSearchResponse200 = {
   data: GetApiGeocodeSearch200
@@ -3236,141 +2788,58 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getPatchApiSettingsPasswordMutationOptions(options), queryClient);
     }
 
-export type postApiSettingsDiscordLinkResponse200 = {
-  data: PostApiSettingsDiscordLink200
+export type postApiSettingsWebhookTestResponse200 = {
+  data: PostApiSettingsWebhookTest200
   status: 200
 }
 
-export type postApiSettingsDiscordLinkResponse429 = {
-  data: PostApiSettingsDiscordLink429
-  status: 429
-}
-
-export type postApiSettingsDiscordLinkResponseSuccess = (postApiSettingsDiscordLinkResponse200) & {
-  headers: Headers;
-};
-export type postApiSettingsDiscordLinkResponseError = (postApiSettingsDiscordLinkResponse429) & {
-  headers: Headers;
-};
-
-export type postApiSettingsDiscordLinkResponse = (postApiSettingsDiscordLinkResponseSuccess | postApiSettingsDiscordLinkResponseError)
-
-export const getPostApiSettingsDiscordLinkUrl = () => {
-
-
-
-
-  return `/api/settings/discord/link`
-}
-
-export const postApiSettingsDiscordLink = async ( options?: RequestInit): Promise<postApiSettingsDiscordLinkResponse> => {
-
-  return customFetch<postApiSettingsDiscordLinkResponse>(getPostApiSettingsDiscordLinkUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-export const getPostApiSettingsDiscordLinkMutationOptions = <TError = PostApiSettingsDiscordLink429,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiSettingsDiscordLink>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof postApiSettingsDiscordLink>>, TError,void, TContext> => {
-
-const mutationKey = ['postApiSettingsDiscordLink'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postApiSettingsDiscordLink>>, void> = () => {
-
-
-          return  postApiSettingsDiscordLink(requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type PostApiSettingsDiscordLinkMutationResult = NonNullable<Awaited<ReturnType<typeof postApiSettingsDiscordLink>>>
-
-    export type PostApiSettingsDiscordLinkMutationError = PostApiSettingsDiscordLink429
-
-    export const usePostApiSettingsDiscordLink = <TError = PostApiSettingsDiscordLink429,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiSettingsDiscordLink>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof postApiSettingsDiscordLink>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getPostApiSettingsDiscordLinkMutationOptions(options), queryClient);
-    }
-
-export type postApiSettingsDiscordVerifyResponse200 = {
-  data: PostApiSettingsDiscordVerify200
-  status: 200
-}
-
-export type postApiSettingsDiscordVerifyResponse400 = {
-  data: PostApiSettingsDiscordVerify400
+export type postApiSettingsWebhookTestResponse400 = {
+  data: PostApiSettingsWebhookTest400
   status: 400
 }
 
-export type postApiSettingsDiscordVerifyResponse409 = {
-  data: PostApiSettingsDiscordVerify409
-  status: 409
+export type postApiSettingsWebhookTestResponse502 = {
+  data: PostApiSettingsWebhookTest502
+  status: 502
 }
 
-export type postApiSettingsDiscordVerifyResponseSuccess = (postApiSettingsDiscordVerifyResponse200) & {
+export type postApiSettingsWebhookTestResponseSuccess = (postApiSettingsWebhookTestResponse200) & {
   headers: Headers;
 };
-export type postApiSettingsDiscordVerifyResponseError = (postApiSettingsDiscordVerifyResponse400 | postApiSettingsDiscordVerifyResponse409) & {
+export type postApiSettingsWebhookTestResponseError = (postApiSettingsWebhookTestResponse400 | postApiSettingsWebhookTestResponse502) & {
   headers: Headers;
 };
 
-export type postApiSettingsDiscordVerifyResponse = (postApiSettingsDiscordVerifyResponseSuccess | postApiSettingsDiscordVerifyResponseError)
+export type postApiSettingsWebhookTestResponse = (postApiSettingsWebhookTestResponseSuccess | postApiSettingsWebhookTestResponseError)
 
-export const getPostApiSettingsDiscordVerifyUrl = () => {
-
-
+export const getPostApiSettingsWebhookTestUrl = () => {
 
 
-  return `/api/settings/discord/verify`
+
+
+  return `/api/settings/webhook-test`
 }
 
-export const postApiSettingsDiscordVerify = async (postApiSettingsDiscordVerifyBody: PostApiSettingsDiscordVerifyBody, options?: RequestInit): Promise<postApiSettingsDiscordVerifyResponse> => {
+export const postApiSettingsWebhookTest = async (postApiSettingsWebhookTestBody: PostApiSettingsWebhookTestBody, options?: RequestInit): Promise<postApiSettingsWebhookTestResponse> => {
 
-  return customFetch<postApiSettingsDiscordVerifyResponse>(getPostApiSettingsDiscordVerifyUrl(),
+  return customFetch<postApiSettingsWebhookTestResponse>(getPostApiSettingsWebhookTestUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
-      postApiSettingsDiscordVerifyBody,)
+      postApiSettingsWebhookTestBody,)
   }
 );}
 
 
 
 
-export const getPostApiSettingsDiscordVerifyMutationOptions = <TError = PostApiSettingsDiscordVerify400 | PostApiSettingsDiscordVerify409,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiSettingsDiscordVerify>>, TError,{data: PostApiSettingsDiscordVerifyBody}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof postApiSettingsDiscordVerify>>, TError,{data: PostApiSettingsDiscordVerifyBody}, TContext> => {
+export const getPostApiSettingsWebhookTestMutationOptions = <TError = PostApiSettingsWebhookTest400 | PostApiSettingsWebhookTest502,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiSettingsWebhookTest>>, TError,{data: PostApiSettingsWebhookTestBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postApiSettingsWebhookTest>>, TError,{data: PostApiSettingsWebhookTestBody}, TContext> => {
 
-const mutationKey = ['postApiSettingsDiscordVerify'];
+const mutationKey = ['postApiSettingsWebhookTest'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -3380,10 +2849,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postApiSettingsDiscordVerify>>, {data: PostApiSettingsDiscordVerifyBody}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postApiSettingsWebhookTest>>, {data: PostApiSettingsWebhookTestBody}> = (props) => {
           const {data} = props ?? {};
 
-          return  postApiSettingsDiscordVerify(data,requestOptions)
+          return  postApiSettingsWebhookTest(data,requestOptions)
         }
 
 
@@ -3393,102 +2862,19 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type PostApiSettingsDiscordVerifyMutationResult = NonNullable<Awaited<ReturnType<typeof postApiSettingsDiscordVerify>>>
-    export type PostApiSettingsDiscordVerifyMutationBody = PostApiSettingsDiscordVerifyBody
-    export type PostApiSettingsDiscordVerifyMutationError = PostApiSettingsDiscordVerify400 | PostApiSettingsDiscordVerify409
+    export type PostApiSettingsWebhookTestMutationResult = NonNullable<Awaited<ReturnType<typeof postApiSettingsWebhookTest>>>
+    export type PostApiSettingsWebhookTestMutationBody = PostApiSettingsWebhookTestBody
+    export type PostApiSettingsWebhookTestMutationError = PostApiSettingsWebhookTest400 | PostApiSettingsWebhookTest502
 
-    export const usePostApiSettingsDiscordVerify = <TError = PostApiSettingsDiscordVerify400 | PostApiSettingsDiscordVerify409,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiSettingsDiscordVerify>>, TError,{data: PostApiSettingsDiscordVerifyBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+    export const usePostApiSettingsWebhookTest = <TError = PostApiSettingsWebhookTest400 | PostApiSettingsWebhookTest502,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiSettingsWebhookTest>>, TError,{data: PostApiSettingsWebhookTestBody}, TContext>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof postApiSettingsDiscordVerify>>,
+        Awaited<ReturnType<typeof postApiSettingsWebhookTest>>,
         TError,
-        {data: PostApiSettingsDiscordVerifyBody},
+        {data: PostApiSettingsWebhookTestBody},
         TContext
       > => {
-      return useMutation(getPostApiSettingsDiscordVerifyMutationOptions(options), queryClient);
-    }
-
-export type postApiSettingsDiscordUnlinkResponse200 = {
-  data: PostApiSettingsDiscordUnlink200
-  status: 200
-}
-
-export type postApiSettingsDiscordUnlinkResponse404 = {
-  data: PostApiSettingsDiscordUnlink404
-  status: 404
-}
-
-export type postApiSettingsDiscordUnlinkResponseSuccess = (postApiSettingsDiscordUnlinkResponse200) & {
-  headers: Headers;
-};
-export type postApiSettingsDiscordUnlinkResponseError = (postApiSettingsDiscordUnlinkResponse404) & {
-  headers: Headers;
-};
-
-export type postApiSettingsDiscordUnlinkResponse = (postApiSettingsDiscordUnlinkResponseSuccess | postApiSettingsDiscordUnlinkResponseError)
-
-export const getPostApiSettingsDiscordUnlinkUrl = () => {
-
-
-
-
-  return `/api/settings/discord/unlink`
-}
-
-export const postApiSettingsDiscordUnlink = async ( options?: RequestInit): Promise<postApiSettingsDiscordUnlinkResponse> => {
-
-  return customFetch<postApiSettingsDiscordUnlinkResponse>(getPostApiSettingsDiscordUnlinkUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-export const getPostApiSettingsDiscordUnlinkMutationOptions = <TError = PostApiSettingsDiscordUnlink404,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiSettingsDiscordUnlink>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof postApiSettingsDiscordUnlink>>, TError,void, TContext> => {
-
-const mutationKey = ['postApiSettingsDiscordUnlink'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postApiSettingsDiscordUnlink>>, void> = () => {
-
-
-          return  postApiSettingsDiscordUnlink(requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type PostApiSettingsDiscordUnlinkMutationResult = NonNullable<Awaited<ReturnType<typeof postApiSettingsDiscordUnlink>>>
-
-    export type PostApiSettingsDiscordUnlinkMutationError = PostApiSettingsDiscordUnlink404
-
-    export const usePostApiSettingsDiscordUnlink = <TError = PostApiSettingsDiscordUnlink404,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postApiSettingsDiscordUnlink>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof postApiSettingsDiscordUnlink>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getPostApiSettingsDiscordUnlinkMutationOptions(options), queryClient);
+      return useMutation(getPostApiSettingsWebhookTestMutationOptions(options), queryClient);
     }
 
 export type getApiAdminDeadLettersResponse200 = {
