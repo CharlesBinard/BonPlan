@@ -40,7 +40,7 @@ export const getOrCreateConnection = async (browserWsUrl: string): Promise<Brows
 			const cdpUrl = new URL(browserWsUrl.replace(/^ws:\/\//, "http://").replace(/^wss:\/\//, "https://"));
 			let resolvedHost = cdpUrl.hostname;
 			try {
-				const { address } = await lookup(cdpUrl.hostname);
+				const { address } = await lookup(cdpUrl.hostname, { family: 4 });
 				resolvedHost = address;
 				logger.info("Resolved browser host to IP", { hostname: cdpUrl.hostname, ip: address });
 			} catch {
