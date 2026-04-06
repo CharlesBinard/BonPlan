@@ -1,7 +1,7 @@
 # Location Autocomplete — Design Spec
 
 **Date**: 2026-04-06
-**Status**: Approved
+**Status**: Approved (rev 2 — post-review)
 
 ## Overview
 
@@ -15,6 +15,19 @@ Le frontend appelle un endpoint proxy sur le gateway, qui forward vers l'API gra
 
 **Pourquoi** : découplage du provider, pas de CORS, possibilité d'ajouter du cache plus tard.
 
+### Type partagé
+
+Le type `GeocodedLocation` est défini dans `@bonplan/shared` pour être utilisé par le frontend et l'orchestrator :
+
+```ts
+type GeocodedLocation = {
+  city: string;
+  postcode: string;
+  latitude: number;
+  longitude: number;
+};
+```
+
 ## Backend
 
 ### Nouvel endpoint
@@ -25,12 +38,13 @@ GET /api/geocode/search?q=paris&limit=5
 
 - **Fichiers** : `packages/gateway/src/routes/geocode/geocode.routes.ts` + `geocode.handlers.ts`
 - **Monté dans** : `packages/gateway/src/app.ts` sur `/api/geocode`
-- **Auth** : derrière le middleware auth existant (rate limit 100 req/60s par user)
-- **Proxy vers** : `https://data.geopf.fr/geocodage/search/?q=...&type=municipality&limit=5`
+- **Auth** : derrière le middleware auth existant (rate limit global 100 req/60s par user)
+- **Proxy vers** : `https://data.geopf.fr/geocodage/search/?q=...&type=municipality&limit=5` (le paramètre `type` est hardcodé, non exposé au client)
 - **Timeout** : 5 secondes (AbortSignal)
-- **Validation** : `q` string min 2 chars, `limit` int 1-10 default 5
+- **Validation** : `q` string min 2 chars max 200 chars (URL-encoded avant forward), `limit` int 1-10 default 5
+- **Route OpenAPI** : utiliser `createRoute` + `@hono/zod-openapi` comme les autres routes
 
-**Schéma de réponse** :
+**Schéma de réponse (200)** :
 
 ```ts
 {
@@ -43,23 +57,34 @@ GET /api/geocode/search?q=paris&limit=5
 }
 ```
 
+**Réponses erreur** :
+- `200` avec `{ results: [] }` si aucun résultat (pas d'erreur)
+- `422` si validation échoue (q trop court, limit invalide)
+- `502` si l'API upstream est down, timeout, ou retourne des données invalides — corps : `{ error: "Geocoding service unavailable" }`
+
 ### Nouveaux champs DB
 
-Table `searches` — 2 colonnes ajoutées :
-- `latitude` : `real`, nullable
-- `longitude` : `real`, nullable
+Table `searches` — 3 colonnes ajoutées :
+- `postcode` : `text`, nullable
+- `latitude` : `doublePrecision`, nullable
+- `longitude` : `doublePrecision`, nullable
+
+**Contraintes CHECK** :
+- `latitude IS NULL OR latitude BETWEEN -90 AND 90`
+- `longitude IS NULL OR longitude BETWEEN -180 AND 180`
+- `(latitude IS NULL) = (longitude IS NULL)` (both-or-neither)
 
 Migration Drizzle à générer.
 
 ### Adaptation schemas
 
-- **Gateway** `createSearchSchema` : ajouter `latitude` (number, optional, nullable) et `longitude` (number, optional, nullable)
+- **Gateway** `createSearchSchema` : ajouter `postcode` (string, optional, nullable), `latitude` (number, optional, nullable) et `longitude` (number, optional, nullable)
 - **Frontend** `searchCreateSchema` : idem
 
 ### Adaptation orchestrator
 
 Dans `on-search-created.ts` :
-- Si `search.latitude` et `search.longitude` sont présents → skip `geocodeCity()`, construire `GeocodedLocation` directement depuis les valeurs DB
+- Si `search.latitude` et `search.longitude` sont présents et valides (non `(0,0)`, dans le bounding box France `lat: [41,52], lng: [-5,10]`) → skip `geocodeCity()`, construire `GeocodedLocation` depuis `{ city: search.location, postcode: search.postcode, latitude: search.latitude, longitude: search.longitude }`
 - Sinon → fallback sur le geocoding existant (rétro-compatibilité pour les recherches déjà créées)
 
 ## Frontend
@@ -68,16 +93,7 @@ Dans `on-search-created.ts` :
 
 **Fichier** : `packages/frontend/src/components/ui/location-autocomplete.tsx`
 
-**Type de valeur** :
-
-```ts
-type GeocodedLocation = {
-  city: string;
-  postcode: string;
-  latitude: number;
-  longitude: number;
-};
-```
+**Base** : construit sur `@base-ui/react/combobox` (déjà installé). Fournit accessibilité ARIA (combobox, listbox, option), keyboard nav complète (flèches, Enter, Escape, Tab, Home/End), focus management, et click-outside — le tout gratuitement.
 
 **Props** :
 
@@ -97,28 +113,29 @@ type LocationAutocompleteProps = {
 - Debounce de 300ms avant d'appeler l'API
 - Minimum 2 caractères pour déclencher la recherche
 - Dropdown avec max 5 suggestions, chacune affichant `"Ville (code postal)"` avec icône pin
-- Navigation clavier : flèches haut/bas, Enter pour sélectionner, Escape pour fermer
-- Spinner dans l'input pendant le chargement
 - Après sélection : input affiche `"Ville (code postal)"`, bouton X pour effacer
-- Effacer → `onChange(null)`
-- Click outside → ferme le dropdown
-- Réutilise le style du composant `Input` existant (@base-ui/react)
+- **Edit après sélection** : tout keystroke après une sélection clear la valeur (`onChange(null)`) et utilise le texte tapé comme nouvelle requête
+- **Clear (X)** : efface le texte et la valeur, remet le focus dans l'input, ne rouvre pas le dropdown
+- **Empty state** : affiche `"Aucun résultat"` dans le dropdown quand l'API retourne 0 résultats
+- **Erreur API** : affiche `"Erreur de recherche"` dans le dropdown en cas de 502/timeout
+- **Touch** : items du dropdown avec min-height 44px pour les cibles touch mobiles
+- Réutilise le style du composant `Input` existant pour l'apparence de l'input
 
 ### Hook `useLocationSearch`
 
-**Fichier** : dans le même fichier que le composant ou un fichier hooks dédié
+**Fichier** : dans le même fichier que le composant
 
 ```ts
-function useLocationSearch(query: string): {
+function useLocationSearch(debouncedQuery: string): {
   results: GeocodedLocation[];
   isLoading: boolean;
 }
 ```
 
-- Gère le debounce (300ms)
-- Appelle `GET /api/geocode/search?q=...&limit=5`
-- Retourne un tableau vide si query < 2 chars
-- Utilise `fetch` directement (pas besoin d'Orval pour un endpoint simple)
+- Utilise **TanStack Query** (`useQuery`) avec `queryKey: ['geocode', debouncedQuery]` et `enabled: debouncedQuery.length >= 2`
+- Appelle via le `customFetch` existant (cohérence : base URL, credentials, 401 handling)
+- Le debounce (300ms) est géré dans le composant avec un state `debouncedQuery` (via `useEffect` + `setTimeout`)
+- TanStack Query gère automatiquement : cache, race conditions (stale queries), cleanup on unmount, deduplication
 
 ### Intégration `SearchCreateDialog`
 
@@ -127,11 +144,13 @@ function useLocationSearch(query: string): {
 Changements :
 - `useState<string>("")` pour location → `useState<GeocodedLocation | null>(null)`
 - `<Input>` location → `<LocationAutocomplete>`
-- `onSubmit` : envoyer `location: selectedLocation?.city ?? ""` + `latitude` + `longitude`
+- `onSubmit` : envoyer `location: selectedLocation?.city ?? ""` + `postcode` + `latitude` + `longitude`
 - Validation : `locationValid = nationWide || selectedLocation !== null`
+- **Erreur inline** : si l'user tape du texte sans sélectionner et submit → afficher `"Sélectionnez une ville dans la liste"`
 - Aperçu : afficher `"Paris (75001)"` au lieu du texte brut
 - Reset : `setSelectedLocation(null)`
-- Toggle "Toute la France" : masque le composant (comportement actuel conservé)
+- Toggle "Toute la France" OFF → auto-focus sur le champ autocomplete
+- Toggle "Toute la France" ON → masque le composant (comportement actuel conservé)
 
 ## Ce qui ne change PAS
 
