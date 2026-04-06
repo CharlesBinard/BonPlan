@@ -19,7 +19,5 @@ COPY tsconfig.base.json ./
 COPY packages/shared/ packages/shared/
 COPY packages/ai/ packages/ai/
 COPY packages/scraper/ packages/scraper/
-RUN adduser -D appuser
-USER appuser
 WORKDIR /app/packages/scraper
 CMD ["node", "--import", "tsx", "src/index.ts"]

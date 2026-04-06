@@ -11,14 +11,9 @@ COPY packages/orchestrator/package.json packages/orchestrator/
 COPY packages/scraper/package.json packages/scraper/
 RUN bun install --frozen-lockfile && rm -rf /root/.bun/install/cache
 
-FROM oven/bun:1.3.9-alpine AS final
-WORKDIR /app
-COPY --from=deps /app/node_modules node_modules/
-COPY --from=deps /app/package.json ./
+FROM deps AS final
 COPY tsconfig.base.json ./
 COPY packages/shared/ packages/shared/
 COPY packages/ai/ packages/ai/
 COPY packages/orchestrator/ packages/orchestrator/
-RUN adduser -D appuser
-USER appuser
 CMD ["bun", "run", "packages/orchestrator/src/index.ts"]
