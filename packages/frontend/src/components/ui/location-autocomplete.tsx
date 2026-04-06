@@ -1,4 +1,4 @@
-import type { GeocodedLocation } from "@bonplan/shared";
+import type { GeocodedLocation } from "@bonplan/shared/types";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2Icon, MapPinIcon, XIcon } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";

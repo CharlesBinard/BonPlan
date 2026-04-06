@@ -62,6 +62,13 @@ export const ScoreBand = {
 } as const;
 export type ScoreBand = (typeof ScoreBand)[keyof typeof ScoreBand];
 
+export type GeocodedLocation = {
+	city: string;
+	postcode: string;
+	latitude: number;
+	longitude: number;
+};
+
 export const getScoreBand = (score: number): ScoreBand => {
 	if (score >= 90) return ScoreBand.Exceptional;
 	if (score >= 70) return ScoreBand.Good;

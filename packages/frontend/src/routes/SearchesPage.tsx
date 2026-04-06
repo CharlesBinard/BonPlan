@@ -9,7 +9,7 @@ import {
 	SlidersHorizontalIcon,
 } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import type { GeocodedLocation } from "@bonplan/shared";
+import type { GeocodedLocation } from "@bonplan/shared/types";
 import { LocationAutocomplete } from "@/components/ui/location-autocomplete";
 import { useCreateSearch, useSearches, useSettings } from "@/api";
 import { SearchCard } from "@/components/SearchCard";
