@@ -1,21 +1,12 @@
 // packages/notifier/src/webhook/webhook.ts
 import { createLogger } from "@bonplan/shared";
+import type { WebhookPayload } from "@bonplan/shared/discord-embed";
+import { buildDiscordWebhookPayload, isDiscordWebhookUrl } from "@bonplan/shared/discord-embed";
 import { validateWebhookIp, validateWebhookUrl } from "@bonplan/shared/ssrf";
 
-const logger = createLogger("notifier");
+export type { WebhookPayload };
 
-export type WebhookPayload = {
-	title: string;
-	price: number;
-	priceFormatted: string;
-	score: number;
-	verdict: string;
-	url: string;
-	image: string | null;
-	searchQuery: string;
-	marketPriceLow: number | null;
-	marketPriceHigh: number | null;
-};
+const logger = createLogger("notifier");
 
 export type SendResult = { success: true } | { success: false; error: string; permanent: boolean };
 
@@ -40,10 +31,14 @@ export const sendWebhook = async (
 	}
 
 	try {
+		const body = isDiscordWebhookUrl(webhookUrl)
+			? buildDiscordWebhookPayload(payload)
+			: payload;
+
 		const response = await fetch(webhookUrl, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(payload),
+			body: JSON.stringify(body),
 			signal: AbortSignal.timeout(10000),
 			redirect: "error",
 		});

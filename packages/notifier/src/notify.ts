@@ -71,6 +71,8 @@ const processNotification = async (
 		searchQuery: search.query,
 		marketPriceLow: analysis?.marketPriceLow ?? null,
 		marketPriceHigh: analysis?.marketPriceHigh ?? null,
+		location: listing.location ?? null,
+		redFlags: analysis?.redFlags ?? [],
 	};
 
 	// ── Webhook ────────────────────────────────────────────────────
