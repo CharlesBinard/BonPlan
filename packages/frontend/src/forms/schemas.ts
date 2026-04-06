@@ -32,12 +32,14 @@ export const searchCreateSchema = z.object({
 	minScore: z.number().int().min(0).max(100).default(70),
 	allowBundles: z.boolean().default(false),
 	analyzeImages: z.boolean().default(false),
+	notifyWebhook: z.string().url().refine((url) => url.startsWith("https://"), "L'URL doit utiliser HTTPS").optional().nullable(),
 });
 
 export const searchUpdateSchema = z.object({
 	intervalMin: z.number().int().min(5).max(1440).optional(),
 	minScore: z.number().int().min(0).max(100).optional(),
 	status: z.enum(["active", "paused"]).optional(),
+	notifyWebhook: z.string().url().optional().nullable(),
 });
 
 export const apiKeySchema = z.object({

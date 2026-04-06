@@ -11,7 +11,7 @@ import {
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import type { GeocodedLocation } from "@bonplan/shared";
 import { LocationAutocomplete } from "@/components/ui/location-autocomplete";
-import { useCreateSearch, useSearches } from "@/api";
+import { useCreateSearch, useSearches, useSettings } from "@/api";
 import { SearchCard } from "@/components/SearchCard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +90,9 @@ const SearchCreateDialog = () => {
 	const [nationWide, setNationWide] = useState(false);
 	const [allowBundles, setAllowBundles] = useState(false);
 	const [analyzeImages, setAnalyzeImages] = useState(false);
+	const [enableWebhook, setEnableWebhook] = useState(false);
+	const [webhookUrl, setWebhookUrl] = useState("");
+	const { data: settings } = useSettings();
 
 	const locationRef = useRef<HTMLDivElement>(null);
 	const hasToggledRef = useRef(false);
@@ -105,16 +108,33 @@ const SearchCreateDialog = () => {
 		hasToggledRef.current = true;
 	}, [nationWide]);
 
+	// Pre-fill webhook from settings
+	useEffect(() => {
+		if (settings?.defaultWebhookUrl) {
+			setEnableWebhook(true);
+			setWebhookUrl(settings.defaultWebhookUrl);
+		}
+	}, [settings?.defaultWebhookUrl]);
+
+	// Pre-fill minScore from settings
+	useEffect(() => {
+		if (settings?.defaultMinScore != null) {
+			setMinScore(String(settings.defaultMinScore));
+		}
+	}, [settings?.defaultMinScore]);
+
 	const reset = () => {
 		setQuery("");
 		setSelectedLocation(null);
 		setRadiusKm("30");
 		setIntervalMin("15");
-		setMinScore("70");
+		setMinScore(String(settings?.defaultMinScore ?? 70));
 		setFieldErrors({});
 		setNationWide(false);
 		setAllowBundles(false);
 		setAnalyzeImages(false);
+		setEnableWebhook(!!settings?.defaultWebhookUrl);
+		setWebhookUrl(settings?.defaultWebhookUrl ?? "");
 	};
 
 	const onSubmit = async (e: FormEvent) => {
@@ -130,6 +150,7 @@ const SearchCreateDialog = () => {
 			minScore: Number(minScore),
 			allowBundles,
 			analyzeImages,
+			notifyWebhook: enableWebhook ? webhookUrl : null,
 		});
 		if (!result.success) {
 			const errs: Record<string, string> = {};
@@ -287,6 +308,32 @@ const SearchCreateDialog = () => {
 						</Label>
 					</div>
 
+					<div className="flex items-center gap-3">
+						<Switch
+							id="enableWebhook"
+							checked={enableWebhook}
+							onCheckedChange={(checked) => setEnableWebhook(checked)}
+						/>
+						<Label htmlFor="enableWebhook" className="cursor-pointer">
+							Notifications webhook
+						</Label>
+					</div>
+
+					{enableWebhook && (
+						<FormField
+							label="URL Webhook"
+							htmlFor="webhookUrl"
+							helpText={webhookUrl ? "Discord webhook ou URL custom HTTPS" : "Configurez une URL par défaut dans Paramètres > Notifications, ou saisissez une URL ci-dessous."}
+						>
+							<Input
+								id="webhookUrl"
+								placeholder="https://discord.com/api/webhooks/..."
+								value={webhookUrl}
+								onChange={(e) => setWebhookUrl(e.target.value)}
+							/>
+						</FormField>
+					)}
+
 					<Separator />
 
 					{/* ── Section 3: Preview ───────────────────────── */}
@@ -305,6 +352,12 @@ const SearchCreateDialog = () => {
 									: selectedLocation
 										? `${selectedLocation.city} (${selectedLocation.postcode})${radiusKm ? ` (${radiusKm} km)` : ""}`
 										: "..."}
+							</span>
+						</div>
+						<div className="flex items-center gap-2">
+							<span className="text-muted-foreground">Webhook :</span>
+							<span className="font-medium truncate max-w-48">
+								{enableWebhook && webhookUrl ? webhookUrl : "Désactivé"}
 							</span>
 						</div>
 						<div className="flex flex-wrap gap-1.5 mt-1">
