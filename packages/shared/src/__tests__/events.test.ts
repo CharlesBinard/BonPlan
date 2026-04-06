@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { DEAD_LETTER_MAX_LEN, deadLetterStream, STREAM_MAX_LEN, Stream } from "../events";
 
 describe("events constants", () => {
-	it("exports Stream enum with all 10 stream names", () => {
+	it("exports Stream enum with all 11 stream names", () => {
 		expect(Stream.SearchCreated).toBe("search.created");
 		expect(Stream.SearchUpdated).toBe("search.updated");
 		expect(Stream.SearchDeleted).toBe("search.deleted");
@@ -12,8 +12,9 @@ describe("events constants", () => {
 		expect(Stream.SearchBlocked).toBe("search.blocked");
 		expect(Stream.ListingsFound).toBe("listings.found");
 		expect(Stream.ListingAnalyzed).toBe("listing.analyzed");
+		expect(Stream.ImageAnalysisComplete).toBe("image.analysis.complete");
 		expect(Stream.NotificationSent).toBe("notification.sent");
-		expect(Object.values(Stream).length).toBe(10);
+		expect(Object.values(Stream).length).toBe(11);
 	});
 
 	it("exports retention constants", () => {

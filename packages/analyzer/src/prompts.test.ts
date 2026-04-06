@@ -61,7 +61,7 @@ describe("buildAnalysisPrompt", () => {
 		// System: role + calibration, NOT listing data
 		expect(prompt.system).toContain("scoring analyst");
 		expect(prompt.system).toContain("90-100");
-		expect(prompt.system).toContain("Score: 88");
+		expect(prompt.system).toContain("Score: 87");
 		expect(prompt.system).toContain("Leboncoin.fr");
 		expect(prompt.system).not.toContain("Seagate IronWolf");
 
