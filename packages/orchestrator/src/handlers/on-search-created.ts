@@ -1,5 +1,6 @@
 import { AiAuthError, AiQuotaError, AiRateLimitError } from "@bonplan/ai";
 import { buildKeyMap, createLogger, decrypt, publish, Stream, searches, users } from "@bonplan/shared";
+import type { GeocodedLocation } from "@bonplan/shared";
 import type { ProviderType } from "@bonplan/shared/ai-models";
 import { eq } from "drizzle-orm";
 import { mapSearchToKeywords } from "../services/ai-mapper";
@@ -140,9 +141,21 @@ export const handleSearchCreated = async (deps: ConsumerDeps, searchId: string, 
 		return;
 	}
 
-	// Geocode location (if not "Toute la France")
-	let geocodedLocation = null;
-	if (search.location && search.location.trim() !== "") {
+	// Use stored coordinates if available, otherwise geocode
+	let geocodedLocation: GeocodedLocation | null = null;
+	if (
+		search.latitude != null &&
+		search.longitude != null &&
+		!(search.latitude === 0 && search.longitude === 0)
+	) {
+		geocodedLocation = {
+			city: search.location,
+			postcode: search.postcode ?? "",
+			latitude: search.latitude,
+			longitude: search.longitude,
+		};
+		logger.info("Using stored coordinates", { searchId, lat: search.latitude, lng: search.longitude });
+	} else if (search.location && search.location.trim() !== "") {
 		geocodedLocation = await geocodeCity(search.location);
 		if (!geocodedLocation) {
 			logger.warn("Could not geocode location, falling back to France-wide search", {
