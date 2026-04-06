@@ -111,6 +111,7 @@ export const searches = pgTable(
 		discordChannelId: text("discord_channel_id"),
 		minScore: integer("min_score").notNull().default(70),
 		allowBundles: boolean("allow_bundles").notNull().default(false),
+		analyzeImages: boolean("analyze_images").notNull().default(false),
 		lastScrapedAt: timestamp("last_scraped_at", { withTimezone: true }),
 		lastError: text("last_error"),
 		blockedUntil: timestamp("blocked_until", { withTimezone: true }),
@@ -223,6 +224,13 @@ export const analyses = pgTable(
 		}> | null>(),
 		marketMedian: integer("market_median"),
 		discount: integer("discount"),
+		imageAnalysis: jsonb("image_analysis").$type<{
+			findings: string[];
+			condition: string;
+			scoreAdjustment: number;
+			originalScore: number;
+			modelUsed: string;
+		} | null>(),
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true })
 			.notNull()

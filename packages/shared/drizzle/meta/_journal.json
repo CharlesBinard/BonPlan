@@ -43,6 +43,13 @@
       "when": 1775505255571,
       "tag": "0005_curvy_sister_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775511601717,
+      "tag": "0006_panoramic_dragon_man",
+      "breakpoints": true
     }
   ]
 }
