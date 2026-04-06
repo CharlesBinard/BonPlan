@@ -8,7 +8,9 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./types": "./src/types.ts",
-		"./ai-models": "./src/ai-models.ts"
+		"./ai-models": "./src/ai-models.ts",
+		"./ssrf": "./src/ssrf.ts",
+		"./discord-embed": "./src/discord-embed.ts"
 	},
 	"scripts": {
 		"test": "bun test src/**/*.test.ts",

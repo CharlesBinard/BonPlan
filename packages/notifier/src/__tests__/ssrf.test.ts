@@ -1,6 +1,6 @@
 // packages/notifier/src/__tests__/ssrf.test.ts
 import { describe, expect, it } from "bun:test";
-import { isPrivateIpV4, isPrivateIpV6, validateWebhookUrl } from "../webhook/ssrf";
+import { isPrivateIpV4, isPrivateIpV6, validateWebhookUrl } from "@bonplan/shared/ssrf";
 
 describe("isPrivateIpV4", () => {
 	it("detects RFC1918 10.x", () => {

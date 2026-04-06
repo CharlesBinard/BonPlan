@@ -1,6 +1,6 @@
 // packages/notifier/src/webhook/webhook.ts
 import { createLogger } from "@bonplan/shared";
-import { validateWebhookIp, validateWebhookUrl } from "./ssrf";
+import { validateWebhookIp, validateWebhookUrl } from "@bonplan/shared/ssrf";
 
 const logger = createLogger("notifier");
 
