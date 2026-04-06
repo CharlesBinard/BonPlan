@@ -29,6 +29,7 @@ exec google-chrome-stable \
     --disable-features=TranslateUI \
     --remote-debugging-port=9223 \
     --remote-debugging-address=0.0.0.0 \
+    --remote-allow-origins=* \
     --user-data-dir=/data/browser-profile \
     --window-size=1920,1080 \
     --lang=fr-FR \
