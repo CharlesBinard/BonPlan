@@ -244,6 +244,9 @@ export function LocationAutocomplete({
 								</span>
 							</li>
 						))}
+					{isLoading && results.length === 0 && (
+						<li className="px-3 py-2.5 text-sm text-muted-foreground">Recherche...</li>
+					)}
 					{results.length === 0 && !isLoading && !isError && (
 						<li className="px-3 py-2.5 text-sm text-muted-foreground">Aucun résultat</li>
 					)}

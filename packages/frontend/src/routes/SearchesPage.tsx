@@ -91,15 +91,17 @@ const SearchCreateDialog = () => {
 	const [allowBundles, setAllowBundles] = useState(false);
 
 	const locationRef = useRef<HTMLDivElement>(null);
+	const hasToggledRef = useRef(false);
 
 	// Auto-focus location input when "Toute la France" is toggled off
 	useEffect(() => {
-		if (!nationWide) {
+		if (hasToggledRef.current && !nationWide) {
 			setTimeout(() => {
 				const input = locationRef.current?.querySelector("input");
 				input?.focus();
 			}, 50);
 		}
+		hasToggledRef.current = true;
 	}, [nationWide]);
 
 	const reset = () => {

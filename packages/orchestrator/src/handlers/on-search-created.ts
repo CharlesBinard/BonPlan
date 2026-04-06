@@ -146,7 +146,9 @@ export const handleSearchCreated = async (deps: ConsumerDeps, searchId: string, 
 	if (
 		search.latitude != null &&
 		search.longitude != null &&
-		!(search.latitude === 0 && search.longitude === 0)
+		!(search.latitude === 0 && search.longitude === 0) &&
+		search.latitude >= 41 && search.latitude <= 52 &&
+		search.longitude >= -5 && search.longitude <= 10
 	) {
 		geocodedLocation = {
 			city: search.location,
