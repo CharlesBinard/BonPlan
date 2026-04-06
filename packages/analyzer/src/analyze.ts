@@ -14,9 +14,15 @@ import {
 	users,
 } from "@bonplan/shared";
 import { getDefaultModel, type ProviderType } from "@bonplan/shared/ai-models";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull } from "drizzle-orm";
+import pLimit from "p-limit";
 import type Redis from "ioredis";
 import { z } from "zod";
+import {
+	analyzeListingImages,
+	IMAGE_ANALYSIS_CONCURRENCY,
+	IMAGE_ANALYSIS_SCORE_THRESHOLD,
+} from "./image-analysis";
 import { computeDiscount, fetchMarketContext, type MarketResearchResult } from "./market-research";
 import { buildAnalysisPrompt, buildBatchAnalysisPrompt } from "./prompts";
 import {
@@ -572,6 +578,108 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 
 					const error = err instanceof Error ? err : new Error(String(err));
 					logger.error("Batch analysis failed", { searchId, batchStart: i, error: error.message });
+				}
+			}
+
+			// ── Second pass: image analysis for high-scoring listings ──
+			if (search.analyzeImages) {
+				const qualifiedAnalyses = await deps.db
+					.select({
+						listingId: analyses.listingId,
+						score: analyses.score,
+						verdict: analyses.verdict,
+						redFlags: analyses.redFlags,
+						marketPriceLow: analyses.marketPriceLow,
+						marketPriceHigh: analyses.marketPriceHigh,
+					})
+					.from(analyses)
+					.where(
+						and(
+							eq(analyses.searchId, searchId),
+							gte(analyses.score, IMAGE_ANALYSIS_SCORE_THRESHOLD),
+							isNull(analyses.imageAnalysis),
+						),
+					);
+
+				if (qualifiedAnalyses.length > 0) {
+					const qualifiedListingRows = await deps.db
+						.select()
+						.from(listings)
+						.where(
+							inArray(
+								listings.id,
+								qualifiedAnalyses.map((a) => a.listingId),
+							),
+						);
+
+					const listingMap = new Map(qualifiedListingRows.map((l) => [l.id, l]));
+					const limit = pLimit(IMAGE_ANALYSIS_CONCURRENCY);
+
+					logger.info("Starting image analysis second pass", {
+						searchId,
+						qualified: qualifiedAnalyses.length,
+					});
+
+					await Promise.all(
+						qualifiedAnalyses.map((existing) =>
+							limit(async () => {
+								const listing = listingMap.get(existing.listingId);
+								if (!listing || existing.score === null) return;
+
+								try {
+									const result = await analyzeListingImages({
+										listing,
+										existingAnalysis: {
+											score: existing.score,
+											verdict: existing.verdict,
+											redFlags: existing.redFlags,
+											marketPriceLow: existing.marketPriceLow,
+											marketPriceHigh: existing.marketPriceHigh,
+										},
+										providerType: userProvider,
+										apiKey,
+										userModel,
+									});
+
+									if (!result) return;
+
+									const adjustedScore = Math.max(
+										0,
+										Math.min(100, existing.score + result.scoreAdjustment),
+									);
+
+									await deps.db
+										.update(analyses)
+										.set({
+											score: adjustedScore,
+											imageAnalysis: result,
+										})
+										.where(
+											and(eq(analyses.listingId, listing.id), eq(analyses.searchId, searchId)),
+										);
+
+									await publish(deps.redis, Stream.ImageAnalysisComplete, {
+										searchId,
+										userId,
+										listingId: listing.id,
+										originalScore: existing.score,
+										adjustedScore,
+									});
+
+									logger.info("Image analysis complete", {
+										listingId: listing.id,
+										originalScore: existing.score,
+										adjustedScore,
+									});
+								} catch (err) {
+									logger.warn("Image analysis failed, text score preserved", {
+										listingId: listing.id,
+										error: err instanceof Error ? err.message : String(err),
+									});
+								}
+							}),
+						),
+					);
 				}
 			}
 		},
