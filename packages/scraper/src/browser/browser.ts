@@ -34,10 +34,22 @@ export const getOrCreateConnection = async (browserWsUrl: string): Promise<Brows
 				return { browser: cachedBrowser, context: cachedContext as BrowserContext, isNew: false };
 			}
 
-			// connectOverCDP accepts an HTTP endpoint and resolves the WebSocket URL internally
-			const cdpEndpoint = browserWsUrl.replace(/^ws:\/\//, "http://").replace(/^wss:\/\//, "https://");
-			logger.info("Connecting to browser via CDP", { cdpEndpoint });
-			const browser = await chromium.connectOverCDP(cdpEndpoint);
+			// Resolve the WebSocket endpoint via /json/version then connect
+			const httpBase = browserWsUrl.replace(/^ws:\/\//, "http://").replace(/^wss:\/\//, "https://");
+			let wsEndpoint = browserWsUrl;
+			try {
+				const res = await fetch(`${httpBase}/json/version`, { signal: AbortSignal.timeout(15000) });
+				const json = (await res.json()) as { webSocketDebuggerUrl?: string };
+				if (json.webSocketDebuggerUrl) {
+					const configuredHost = new URL(browserWsUrl).host;
+					wsEndpoint = json.webSocketDebuggerUrl.replace(/^ws:\/\/[^/]+/, `ws://${configuredHost}`);
+				}
+			} catch (err) {
+				const errMsg = err instanceof Error ? err.message : String(err);
+				logger.warn("Could not fetch /json/version", { error: errMsg });
+			}
+			logger.info("Connecting to browser via CDP", { wsEndpoint });
+			const browser = await chromium.connectOverCDP(wsEndpoint);
 
 			const context =
 				browser.contexts()[0] ??
