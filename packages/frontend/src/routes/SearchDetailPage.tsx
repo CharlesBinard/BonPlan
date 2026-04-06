@@ -2,6 +2,7 @@ import { SearchStatus } from "@bonplan/shared/types";
 import {
 	ArrowLeftIcon,
 	BarChart3Icon,
+	BellIcon,
 	Loader2Icon,
 	PauseIcon,
 	PlayIcon,
@@ -25,6 +26,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { statusColors, statusLabels } from "@/constants/search-status";
@@ -44,6 +47,8 @@ const SearchDetailPage = () => {
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [webhookDialogOpen, setWebhookDialogOpen] = useState(false);
+	const [editWebhookUrl, setEditWebhookUrl] = useState("");
 
 	const sort = searchParams.get("sort") ?? "score_desc";
 	const minScore = searchParams.get("minScore") ? Number(searchParams.get("minScore")) : 0;
@@ -71,6 +76,11 @@ const SearchDetailPage = () => {
 		await del.mutateAsync({ id });
 		setDeleteDialogOpen(false);
 		navigate("/searches");
+	};
+
+	const openWebhookDialog = () => {
+		setEditWebhookUrl(search?.notifyWebhook ?? "");
+		setWebhookDialogOpen(true);
 	};
 
 	// Compute summary stats from visible listings
@@ -136,6 +146,20 @@ const SearchDetailPage = () => {
 							{del.isPending ? <Loader2Icon className="animate-spin" /> : <TrashIcon />}
 							Supprimer
 						</Button>
+					</div>
+
+					{/* Notifications */}
+					<div className="flex flex-col gap-2">
+						<h2 className="text-sm font-medium text-muted-foreground">Notifications</h2>
+						<div className="flex items-center gap-2 text-sm">
+							<BellIcon className="size-4 text-muted-foreground" />
+							<span className="truncate max-w-64 text-muted-foreground">
+								{search.notifyWebhook ?? "Aucun webhook configuré"}
+							</span>
+							<Button variant="outline" size="sm" onClick={openWebhookDialog}>
+								Modifier
+							</Button>
+						</div>
 					</div>
 				</div>
 			) : null}
@@ -270,6 +294,48 @@ const SearchDetailPage = () => {
 							{del.isPending ? "Suppression…" : "Supprimer"}
 						</Button>
 						<DialogClose render={<Button variant="outline" />}>Annuler</DialogClose>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Webhook edit dialog */}
+			<Dialog open={webhookDialogOpen} onOpenChange={setWebhookDialogOpen}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle>Modifier les notifications</DialogTitle>
+						<DialogDescription>
+							Configurez l'URL webhook pour recevoir les alertes de bonnes affaires.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="flex flex-col gap-3">
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="editWebhookUrl">URL Webhook</Label>
+							<Input
+								id="editWebhookUrl"
+								value={editWebhookUrl}
+								onChange={(e) => setEditWebhookUrl(e.target.value)}
+								placeholder="https://discord.com/api/webhooks/..."
+							/>
+							<p className="text-[11px] text-muted-foreground">
+								Laissez vide pour désactiver les notifications webhook.
+							</p>
+						</div>
+					</div>
+					<DialogFooter>
+						<DialogClose render={<Button variant="outline" />}>Annuler</DialogClose>
+						<Button
+							onClick={async () => {
+								await update.mutateAsync({
+									id: search!.id,
+									data: { notifyWebhook: editWebhookUrl || null },
+								});
+								setWebhookDialogOpen(false);
+							}}
+							disabled={update.isPending}
+						>
+							{update.isPending && <Loader2Icon className="animate-spin" />}
+							Sauvegarder
+						</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
