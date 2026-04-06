@@ -83,6 +83,7 @@ export type GetApiDiscordSearches200DataItem = {
   discordChannelId: string | null;
   minScore: number;
   allowBundles: boolean;
+  analyzeImages: boolean;
   lastScrapedAt: string | null;
   lastError: string | null;
   blockedUntil: string | null;
@@ -148,6 +149,7 @@ export type PatchApiDiscordSearchesId200Data = {
   discordChannelId: string | null;
   minScore: number;
   allowBundles: boolean;
+  analyzeImages: boolean;
   lastScrapedAt: string | null;
   lastError: string | null;
   blockedUntil: string | null;
@@ -266,6 +268,7 @@ export type GetApiSearches200SearchesItem = {
   discordChannelId: string | null;
   minScore: number;
   allowBundles: boolean;
+  analyzeImages: boolean;
   lastScrapedAt: string | null;
   lastError: string | null;
   blockedUntil: string | null;
@@ -316,6 +319,7 @@ export type PostApiSearchesBody = {
      */
   minScore?: number;
   allowBundles?: boolean;
+  analyzeImages?: boolean;
 };
 
 export type PostApiSearches201SearchStatus = typeof PostApiSearches201SearchStatus[keyof typeof PostApiSearches201SearchStatus];
@@ -360,6 +364,7 @@ export type PostApiSearches201Search = {
   discordChannelId: string | null;
   minScore: number;
   allowBundles: boolean;
+  analyzeImages: boolean;
   lastScrapedAt: string | null;
   lastError: string | null;
   blockedUntil: string | null;
@@ -425,6 +430,7 @@ export type GetApiSearchesId200Search = {
   discordChannelId: string | null;
   minScore: number;
   allowBundles: boolean;
+  analyzeImages: boolean;
   lastScrapedAt: string | null;
   lastError: string | null;
   blockedUntil: string | null;
@@ -513,6 +519,7 @@ export type PatchApiSearchesId200Search = {
   discordChannelId: string | null;
   minScore: number;
   allowBundles: boolean;
+  analyzeImages: boolean;
   lastScrapedAt: string | null;
   lastError: string | null;
   blockedUntil: string | null;
@@ -599,6 +606,14 @@ export type GetApiSearchesIdListings200ListingsItemAnalysisComparablesItem = {
   date?: string;
 };
 
+export type GetApiSearchesIdListings200ListingsItemAnalysisImageAnalysis = {
+  findings: string[];
+  condition: string;
+  scoreAdjustment: number;
+  originalScore: number;
+  modelUsed: string;
+} | null;
+
 export type GetApiSearchesIdListings200ListingsItemAnalysis = {
   id: string;
   listingId: string;
@@ -617,6 +632,7 @@ export type GetApiSearchesIdListings200ListingsItemAnalysis = {
   comparables: GetApiSearchesIdListings200ListingsItemAnalysisComparablesItem[] | null;
   marketMedian: number | null;
   discount: number | null;
+  imageAnalysis: GetApiSearchesIdListings200ListingsItemAnalysisImageAnalysis;
   createdAt: string;
   updatedAt: string;
 } | null;
@@ -685,6 +701,14 @@ export type GetApiSearchesIdListingsListingId200AnalysisComparablesItem = {
   date?: string;
 };
 
+export type GetApiSearchesIdListingsListingId200AnalysisImageAnalysis = {
+  findings: string[];
+  condition: string;
+  scoreAdjustment: number;
+  originalScore: number;
+  modelUsed: string;
+} | null;
+
 export type GetApiSearchesIdListingsListingId200Analysis = {
   id: string;
   listingId: string;
@@ -703,6 +727,7 @@ export type GetApiSearchesIdListingsListingId200Analysis = {
   comparables: GetApiSearchesIdListingsListingId200AnalysisComparablesItem[] | null;
   marketMedian: number | null;
   discount: number | null;
+  imageAnalysis: GetApiSearchesIdListingsListingId200AnalysisImageAnalysis;
   createdAt: string;
   updatedAt: string;
 } | null;
@@ -855,6 +880,14 @@ export type GetApiStatsGoodDeals200GoodDealsItemAnalysisComparablesItem = {
   date?: string;
 };
 
+export type GetApiStatsGoodDeals200GoodDealsItemAnalysisImageAnalysis = {
+  findings: string[];
+  condition: string;
+  scoreAdjustment: number;
+  originalScore: number;
+  modelUsed: string;
+} | null;
+
 export type GetApiStatsGoodDeals200GoodDealsItemAnalysis = {
   id: string;
   listingId: string;
@@ -873,6 +906,7 @@ export type GetApiStatsGoodDeals200GoodDealsItemAnalysis = {
   comparables: GetApiStatsGoodDeals200GoodDealsItemAnalysisComparablesItem[] | null;
   marketMedian: number | null;
   discount: number | null;
+  imageAnalysis: GetApiStatsGoodDeals200GoodDealsItemAnalysisImageAnalysis;
   createdAt: string;
   updatedAt: string;
 };
