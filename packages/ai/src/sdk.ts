@@ -123,3 +123,45 @@ export const generateFreeText = async (params: {
 		return mapSdkError(err);
 	}
 };
+
+export const generateStructuredWithImages = async <SCHEMA extends z.ZodType>(params: {
+	providerType: ProviderType;
+	apiKey: string;
+	model: string;
+	schema: SCHEMA;
+	system: string;
+	prompt: string;
+	imageUrls: string[];
+	maxOutputTokens?: number;
+}): Promise<{ data: z.infer<SCHEMA>; usage?: { inputTokens: number; outputTokens: number } }> => {
+	const model = createModel(params.providerType, params.apiKey, params.model);
+
+	const content: Array<{ type: "text"; text: string } | { type: "image"; image: URL }> = [
+		{ type: "text", text: params.prompt },
+		...params.imageUrls.map((url) => ({ type: "image" as const, image: new URL(url) })),
+	];
+
+	try {
+		const result = await generateText({
+			model,
+			output: Output.object({ schema: params.schema }),
+			system: params.system,
+			messages: [{ role: "user", content }],
+			maxOutputTokens: params.maxOutputTokens,
+		});
+
+		if (!result.output) {
+			throw new Error("No object generated: model did not produce structured output");
+		}
+
+		return {
+			data: result.output as z.infer<SCHEMA>,
+			usage: {
+				inputTokens: result.usage.inputTokens ?? 0,
+				outputTokens: result.usage.outputTokens ?? 0,
+			},
+		};
+	} catch (err) {
+		return mapSdkError(err);
+	}
+};

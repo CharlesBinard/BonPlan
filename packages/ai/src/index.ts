@@ -1,2 +1,2 @@
 export { AiAuthError, AiQuotaError, AiRateLimitError } from "./errors";
-export { generateFreeText, generateStructured } from "./sdk";
+export { generateFreeText, generateStructured, generateStructuredWithImages } from "./sdk";
