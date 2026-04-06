@@ -35,6 +35,7 @@ export type WsMessage =
 	| { type: "search.error"; searchId: string; source: string; error: string; errorType: string }
 	| { type: "search.blocked"; searchId: string; reason: string; retryAfter: string }
 	| { type: "listing.analyzed"; searchId: string; listingId: string; score: number; verdict: string }
+	| { type: "image.analysis.complete"; searchId: string; listingId: string; originalScore: number; adjustedScore: number }
 	| { type: "notification.sent"; notificationId: string; channel: string; status: string }
 	| { type: "auth.expired" };
 

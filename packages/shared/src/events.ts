@@ -12,6 +12,7 @@ export enum Stream {
 	SearchBlocked = "search.blocked",
 	ListingsFound = "listings.found",
 	ListingAnalyzed = "listing.analyzed",
+	ImageAnalysisComplete = "image.analysis.complete",
 	NotificationSent = "notification.sent",
 }
 
@@ -41,6 +42,13 @@ export type ListingAnalyzedPayload = {
 	score: number;
 	verdict: string;
 };
+export type ImageAnalysisCompletePayload = {
+	searchId: string;
+	userId: string;
+	listingId: string;
+	originalScore: number;
+	adjustedScore: number;
+};
 export type NotificationSentPayload = { notificationId: string; userId: string; channel: string; status: string };
 
 type StreamPayloadMap = {
@@ -53,6 +61,7 @@ type StreamPayloadMap = {
 	[Stream.SearchBlocked]: SearchBlockedPayload;
 	[Stream.ListingsFound]: ListingsFoundPayload;
 	[Stream.ListingAnalyzed]: ListingAnalyzedPayload;
+	[Stream.ImageAnalysisComplete]: ImageAnalysisCompletePayload;
 	[Stream.NotificationSent]: NotificationSentPayload;
 };
 
