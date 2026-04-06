@@ -94,6 +94,7 @@ export async function analyzeListingImages(params: {
 		prompt: user,
 		imageUrls: validUrls,
 		maxOutputTokens: 2048,
+		temperature: 0.3,
 	});
 
 	logger.info("Image analysis AI call", {

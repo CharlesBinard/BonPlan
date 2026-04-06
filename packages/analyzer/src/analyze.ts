@@ -217,6 +217,7 @@ const analyzeSingle = async (
 		system: prompt.system,
 		prompt: prompt.user,
 		maxOutputTokens: 2048,
+		temperature: 0.3,
 	});
 
 	const result = normalizeMarketPrices(data);
@@ -286,6 +287,7 @@ const analyzeBatch = async (
 			system: prompt.system,
 			prompt: prompt.user,
 			maxOutputTokens,
+			temperature: 0.3,
 		});
 		batchResults = data.map(normalizeMarketPrices);
 	} catch (err) {
@@ -582,7 +584,8 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 			}
 
 			// ── Second pass: image analysis for high-scoring listings ──
-			if (search.analyzeImages) {
+			const { modelSupportsVision } = await import("@bonplan/shared/ai-models");
+			if (search.analyzeImages && modelSupportsVision(userProvider, userModel)) {
 				const qualifiedAnalyses = await deps.db
 					.select({
 						listingId: analyses.listingId,
