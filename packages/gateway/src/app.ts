@@ -15,6 +15,7 @@ import { notificationRoutes } from "./routes/notifications/notifications.handler
 import { searchRoutes } from "./routes/searches/searches.handlers";
 import { settingsRoutes } from "./routes/settings/settings.handlers";
 import { statsRoutes } from "./routes/stats/stats.handlers";
+import { geocodeRoutes } from "./routes/geocode/geocode.handlers";
 
 const logger = createLogger("gateway");
 
@@ -59,6 +60,7 @@ app.route("/api/discord", discordApiRoutes);
 app.use("/api/*", requireAuth);
 app.use("/api/*", userRateLimit(100, 60_000));
 
+app.route("/api/geocode", geocodeRoutes);
 app.route("/api/searches", searchRoutes);
 app.route("/api/favorites", favoriteRoutes);
 app.route("/api/notifications", notificationRoutes);
