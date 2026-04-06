@@ -141,7 +141,7 @@ const ListingDetailPage = () => {
 						Score ajusté par l'analyse d'images (original: {analysis.imageAnalysis.originalScore})
 					</p>
 				)}
-				{analysis?.verdict && <p className="font-semibold">{analysis.verdict}</p>}
+				{analysis?.verdict && <p className="font-semibold whitespace-pre-line">{analysis.verdict}</p>}
 			</div>
 
 			{/* Reasoning (expandable) */}
@@ -155,7 +155,7 @@ const ListingDetailPage = () => {
 						{reasoningExpanded ? <ChevronUpIcon className="size-4" /> : <ChevronDownIcon className="size-4" />}
 						Raisonnement
 					</button>
-					{reasoningExpanded && <p className="text-sm leading-relaxed text-muted-foreground">{analysis.reasoning}</p>}
+					{reasoningExpanded && <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">{analysis.reasoning}</p>}
 				</div>
 			)}
 
