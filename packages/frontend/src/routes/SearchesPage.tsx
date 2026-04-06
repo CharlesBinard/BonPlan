@@ -89,6 +89,7 @@ const SearchCreateDialog = () => {
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 	const [nationWide, setNationWide] = useState(false);
 	const [allowBundles, setAllowBundles] = useState(false);
+	const [analyzeImages, setAnalyzeImages] = useState(false);
 
 	const locationRef = useRef<HTMLDivElement>(null);
 	const hasToggledRef = useRef(false);
@@ -113,6 +114,7 @@ const SearchCreateDialog = () => {
 		setFieldErrors({});
 		setNationWide(false);
 		setAllowBundles(false);
+		setAnalyzeImages(false);
 	};
 
 	const onSubmit = async (e: FormEvent) => {
@@ -127,6 +129,7 @@ const SearchCreateDialog = () => {
 			intervalMin: Number(intervalMin),
 			minScore: Number(minScore),
 			allowBundles,
+			analyzeImages,
 		});
 		if (!result.success) {
 			const errs: Record<string, string> = {};
@@ -270,6 +273,17 @@ const SearchCreateDialog = () => {
 						<Switch id="allowBundles" checked={allowBundles} onCheckedChange={(checked) => setAllowBundles(checked)} />
 						<Label htmlFor="allowBundles" className="cursor-pointer">
 							Autoriser les lots / bundles
+						</Label>
+					</div>
+
+					<div className="flex items-center gap-3">
+						<Switch
+							id="analyzeImages"
+							checked={analyzeImages}
+							onCheckedChange={(checked) => setAnalyzeImages(checked)}
+						/>
+						<Label htmlFor="analyzeImages" className="cursor-pointer">
+							Analyser les images (IA)
 						</Label>
 					</div>
 

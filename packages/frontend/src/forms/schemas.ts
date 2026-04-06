@@ -31,6 +31,7 @@ export const searchCreateSchema = z.object({
 	intervalMin: z.number().int().min(5).max(1440).default(15),
 	minScore: z.number().int().min(0).max(100).default(70),
 	allowBundles: z.boolean().default(false),
+	analyzeImages: z.boolean().default(false),
 });
 
 export const searchUpdateSchema = z.object({
