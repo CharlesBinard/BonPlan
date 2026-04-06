@@ -16,6 +16,7 @@ export type ModelOption = {
 	label: string;
 	tier: AiModelTier;
 	recommended?: boolean;
+	supportsVision?: boolean;
 };
 
 export const PROVIDER_LABELS: Record<ProviderType, string> = {
@@ -27,24 +28,24 @@ export const PROVIDER_LABELS: Record<ProviderType, string> = {
 
 export const AI_MODELS: Record<ProviderType, ModelOption[]> = {
 	[ProviderType.Claude]: [
-		{ id: "claude-haiku-4-5", label: "Claude Haiku 4.5", tier: AiModelTier.Fast },
-		{ id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", tier: AiModelTier.Balanced, recommended: true },
-		{ id: "claude-opus-4-6", label: "Claude Opus 4.6", tier: AiModelTier.Premium },
+		{ id: "claude-haiku-4-5", label: "Claude Haiku 4.5", tier: AiModelTier.Fast, supportsVision: true },
+		{ id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", tier: AiModelTier.Balanced, recommended: true, supportsVision: true },
+		{ id: "claude-opus-4-6", label: "Claude Opus 4.6", tier: AiModelTier.Premium, supportsVision: true },
 	],
 	[ProviderType.OpenAI]: [
-		{ id: "gpt-5.4-nano", label: "GPT-5.4 Nano", tier: AiModelTier.Fast },
-		{ id: "gpt-5.4-mini", label: "GPT-5.4 Mini", tier: AiModelTier.Balanced, recommended: true },
-		{ id: "gpt-5.4", label: "GPT-5.4", tier: AiModelTier.Premium },
+		{ id: "gpt-5.4-nano", label: "GPT-5.4 Nano", tier: AiModelTier.Fast, supportsVision: true },
+		{ id: "gpt-5.4-mini", label: "GPT-5.4 Mini", tier: AiModelTier.Balanced, recommended: true, supportsVision: true },
+		{ id: "gpt-5.4", label: "GPT-5.4", tier: AiModelTier.Premium, supportsVision: true },
 	],
 	[ProviderType.Gemini]: [
-		{ id: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite", tier: AiModelTier.Fast },
-		{ id: "gemini-3-flash", label: "Gemini 3 Flash", tier: AiModelTier.Balanced, recommended: true },
-		{ id: "gemini-3.1-pro", label: "Gemini 3.1 Pro", tier: AiModelTier.Premium },
+		{ id: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite", tier: AiModelTier.Fast, supportsVision: true },
+		{ id: "gemini-3-flash", label: "Gemini 3 Flash", tier: AiModelTier.Balanced, recommended: true, supportsVision: true },
+		{ id: "gemini-3.1-pro", label: "Gemini 3.1 Pro", tier: AiModelTier.Premium, supportsVision: true },
 	],
 	[ProviderType.Minimax]: [
-		{ id: "MiniMax-M2.1", label: "MiniMax M2.1", tier: AiModelTier.Fast },
-		{ id: "MiniMax-M2.5", label: "MiniMax M2.5", tier: AiModelTier.Balanced, recommended: true },
-		{ id: "MiniMax-M2.7", label: "MiniMax M2.7", tier: AiModelTier.Premium },
+		{ id: "MiniMax-M2.1", label: "MiniMax M2.1", tier: AiModelTier.Fast, supportsVision: false },
+		{ id: "MiniMax-M2.5", label: "MiniMax M2.5", tier: AiModelTier.Balanced, recommended: true, supportsVision: true },
+		{ id: "MiniMax-M2.7", label: "MiniMax M2.7", tier: AiModelTier.Premium, supportsVision: true },
 	],
 };
 
@@ -62,4 +63,9 @@ export function isValidProvider(value: string): value is ProviderType {
 
 export function isValidModel(provider: ProviderType, modelId: string): boolean {
 	return AI_MODELS[provider].some((m) => m.id === modelId);
+}
+
+export function modelSupportsVision(provider: ProviderType, modelId: string): boolean {
+	const model = AI_MODELS[provider]?.find((m) => m.id === modelId);
+	return model?.supportsVision ?? false;
 }
