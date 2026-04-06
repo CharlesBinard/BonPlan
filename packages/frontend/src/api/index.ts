@@ -41,8 +41,6 @@ import {
 	getPostApiSearchesIdTriggerMutationOptions,
 	// Mutation option helpers
 	getPostApiSearchesMutationOptions,
-	getPostApiSettingsDiscordUnlinkMutationOptions,
-	getPostApiSettingsDiscordVerifyMutationOptions,
 } from "./generated/bonPlanAPI";
 
 // ─── Generated query key helpers ────────────────────────────────────
@@ -80,7 +78,6 @@ export type {
 	PatchApiSettingsBody as UpdateSettingsBody,
 	PatchApiSettingsPasswordBody as ChangePasswordBody,
 	PostApiSearchesBody as CreateSearchBody,
-	PostApiSettingsDiscordVerifyBody as DiscordVerifyBody,
 } from "./generated/bonPlanAPI.schemas";
 
 // ─── Query hooks (unwrap .data from Orval response envelope) ────────
@@ -339,26 +336,3 @@ export const useChangePassword = () => {
 	});
 };
 
-export const useVerifyDiscordCode = () => {
-	const qc = useQueryClient();
-	const mutationOptions = getPostApiSettingsDiscordVerifyMutationOptions();
-	return useMutation({
-		...mutationOptions,
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: getGetApiSettingsQueryOptions().queryKey });
-			toast.success("Compte Discord lié !");
-		},
-	});
-};
-
-export const useUnlinkDiscord = () => {
-	const qc = useQueryClient();
-	const mutationOptions = getPostApiSettingsDiscordUnlinkMutationOptions();
-	return useMutation({
-		...mutationOptions,
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: getGetApiSettingsQueryOptions().queryKey });
-			toast.success("Discord délié");
-		},
-	});
-};

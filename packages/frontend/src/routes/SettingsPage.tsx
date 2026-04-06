@@ -9,12 +9,9 @@ import {
 	AlertCircleIcon,
 	CheckCircle2Icon,
 	CpuIcon,
-	LinkIcon,
 	Loader2Icon,
 	LockIcon,
-	MessageCircleIcon,
 	ShieldCheckIcon,
-	UnlinkIcon,
 	WebhookIcon,
 } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
@@ -22,9 +19,7 @@ import {
 	type UpdateSettingsBody,
 	useChangePassword,
 	useSettings,
-	useUnlinkDiscord,
 	useUpdateSettings,
-	useVerifyDiscordCode,
 } from "@/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +39,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError } from "@/config/api";
-import { discordVerifySchema, passwordChangeSchema } from "@/forms/schemas";
+import { passwordChangeSchema } from "@/forms/schemas";
 
 // ── Reusable form field wrapper with validation styling ──────────────
 const FormField = ({
@@ -352,112 +347,6 @@ const WebhooksTab = () => (
 	</Card>
 );
 
-// ── Discord Tab ──────────────────────────────────────────────────────
-const DiscordTab = () => {
-	const { data, isLoading } = useSettings();
-	const verifyDiscord = useVerifyDiscordCode();
-	const unlinkDiscord = useUnlinkDiscord();
-	const settings = data;
-
-	const [code, setCode] = useState("");
-	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-	const onSubmit = async (e: FormEvent) => {
-		e.preventDefault();
-		const result = discordVerifySchema.safeParse({ code });
-		if (!result.success) {
-			const errs: Record<string, string> = {};
-			for (const issue of result.error.issues) {
-				const key = issue.path[0] as string;
-				if (!errs[key]) errs[key] = issue.message;
-			}
-			setFieldErrors(errs);
-			return;
-		}
-		setFieldErrors({});
-		await verifyDiscord.mutateAsync({ data: { code: result.data.code } });
-		setCode("");
-	};
-
-	const codeValid = code.length === 6;
-
-	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>Discord</CardTitle>
-				<CardDescription>Recevez des notifications Discord pour vos bonnes affaires.</CardDescription>
-			</CardHeader>
-			<CardContent className="flex flex-col gap-4">
-				{isLoading ? (
-					<Skeleton className="h-6 w-32" />
-				) : (
-					<div className="flex items-center gap-2">
-						<span className="text-sm text-muted-foreground">Statut :</span>
-						{settings?.discordLinked ? (
-							<>
-								<Badge className="bg-indigo-100 text-indigo-700 border-0">
-									<LinkIcon className="size-3" />
-									Lié
-								</Badge>
-								{settings.discordUserId && (
-									<span className="text-xs text-muted-foreground">({settings.discordUserId})</span>
-								)}
-							</>
-						) : (
-							<Badge className="bg-gray-100 text-gray-600 border-0">
-								<UnlinkIcon className="size-3" />
-								Non lié
-							</Badge>
-						)}
-					</div>
-				)}
-
-				{settings?.discordLinked ? (
-					<Button
-						variant="destructive"
-						size="sm"
-						onClick={() => unlinkDiscord.mutate()}
-						disabled={unlinkDiscord.isPending}
-						className="w-fit"
-					>
-						{unlinkDiscord.isPending && <Loader2Icon className="animate-spin" />}
-						Délier Discord
-					</Button>
-				) : (
-					<>
-						<p className="text-sm text-muted-foreground">
-							Pour lier votre compte Discord, envoyez la commande{" "}
-							<code className="rounded bg-muted px-1 py-0.5">/link</code> au bot BonPlan et saisissez le code reçu.
-						</p>
-						<form onSubmit={onSubmit} className="flex flex-col gap-3">
-							<FormField
-								label="Code de vérification (6 caractères)"
-								htmlFor="discordCode"
-								required
-								error={fieldErrors.code}
-								valid={codeValid}
-							>
-								<Input
-									id="discordCode"
-									placeholder="ABC123"
-									maxLength={6}
-									value={code}
-									onChange={(e) => setCode(e.target.value.toUpperCase())}
-									className="font-mono tracking-widest uppercase w-40"
-								/>
-							</FormField>
-							<Button type="submit" disabled={verifyDiscord.isPending || !codeValid} className="w-fit">
-								{verifyDiscord.isPending && <Loader2Icon className="animate-spin" />}
-								{verifyDiscord.isPending ? "Vérification..." : "Vérifier le code"}
-							</Button>
-						</form>
-					</>
-				)}
-			</CardContent>
-		</Card>
-	);
-};
-
 // ── Password Tab ─────────────────────────────────────────────────────
 const PasswordTab = () => {
 	const changePassword = useChangePassword();
@@ -575,10 +464,6 @@ const SettingsPage = () => (
 					<WebhookIcon className="size-4" />
 					Webhooks
 				</TabsTrigger>
-				<TabsTrigger value="discord">
-					<MessageCircleIcon className="size-4" />
-					Discord
-				</TabsTrigger>
 				<TabsTrigger value="password">
 					<LockIcon className="size-4" />
 					Mot de passe
@@ -589,9 +474,6 @@ const SettingsPage = () => (
 			</TabsContent>
 			<TabsContent value="webhooks">
 				<WebhooksTab />
-			</TabsContent>
-			<TabsContent value="discord">
-				<DiscordTab />
 			</TabsContent>
 			<TabsContent value="password">
 				<PasswordTab />

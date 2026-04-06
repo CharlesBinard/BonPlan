@@ -59,7 +59,3 @@ export const passwordChangeSchema = z
 		message: "Les mots de passe ne correspondent pas",
 		path: ["confirmPassword"],
 	});
-
-export const discordVerifySchema = z.object({
-	code: z.string().length(6, "Le code doit faire 6 caractères"),
-});

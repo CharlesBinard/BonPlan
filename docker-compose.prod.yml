@@ -149,7 +149,6 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?}
       GATEWAY_URL: http://gateway:3000
       ADMIN_USER_ID: ${ADMIN_USER_ID:-}
-      DISCORD_SERVICE_TOKEN: ${DISCORD_SERVICE_TOKEN:-}
       TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-}
     depends_on:
       postgres:
@@ -238,9 +237,6 @@ services:
     environment:
       <<: [*common-env, *db-env]
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?}
-      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
-      DISCORD_SERVICE_TOKEN: ${DISCORD_SERVICE_TOKEN:-}
-      GATEWAY_URL: http://gateway:3000
     depends_on:
       postgres:
         condition: service_healthy
