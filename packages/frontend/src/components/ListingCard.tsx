@@ -28,6 +28,10 @@ interface ListingCardProps {
 	analysis?: ListingCardAnalysis | null;
 	searchId: string;
 	isFavorite?: boolean;
+	selectable?: boolean;
+	selected?: boolean;
+	onSelect?: (id: string) => void;
+	selectDisabled?: boolean;
 }
 
 const formatPrice = (cents: number): string => {
@@ -58,7 +62,16 @@ const sellerTypeConfig: Record<string, { label: string; icon: typeof UserIcon }>
 	pro: { label: "Pro", icon: Building2Icon },
 };
 
-export const ListingCard = ({ listing, analysis, searchId, isFavorite = false }: ListingCardProps) => {
+export const ListingCard = ({
+	listing,
+	analysis,
+	searchId,
+	isFavorite = false,
+	selectable = false,
+	selected = false,
+	onSelect,
+	selectDisabled = false,
+}: ListingCardProps) => {
 	const navigate = useNavigate();
 	const toggleFavorite = useToggleFavorite();
 
@@ -76,6 +89,13 @@ export const ListingCard = ({ listing, analysis, searchId, isFavorite = false }:
 		toggleFavorite.mutate({ listingId: listing.id, add: !isFavorite });
 	};
 
+	const handleSelectClick = (e: React.MouseEvent) => {
+		e.stopPropagation();
+		if (!selectDisabled || selected) {
+			onSelect?.(listing.id);
+		}
+	};
+
 	return (
 		<Card
 			className="cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-lg overflow-hidden"
@@ -87,12 +107,55 @@ export const ListingCard = ({ listing, analysis, searchId, isFavorite = false }:
 			{/* Image with score overlay */}
 			{thumbnail && (
 				<div className="relative">
+					{selectable && (
+						<button
+							type="button"
+							onClick={handleSelectClick}
+							className={cn(
+								"absolute top-2 left-2 z-10 flex size-5 items-center justify-center rounded border-2 transition-colors",
+								selected
+									? "border-primary bg-primary text-primary-foreground"
+									: selectDisabled
+										? "border-muted-foreground/30 bg-muted/50 cursor-not-allowed"
+										: "border-muted-foreground/50 bg-background/80 hover:border-primary",
+							)}
+						>
+							{selected && (
+								<svg viewBox="0 0 16 16" fill="currentColor" className="size-3">
+									<path d="M12.207 4.793a1 1 0 0 1 0 1.414l-5 5a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L6.5 9.086l4.293-4.293a1 1 0 0 1 1.414 0z" />
+								</svg>
+							)}
+						</button>
+					)}
 					<img src={thumbnail} alt={listing.title} className="h-40 w-full object-cover" />
 					{score !== null && (
 						<div className="absolute top-2 right-2">
 							<ScoreCircle score={score} />
 						</div>
 					)}
+				</div>
+			)}
+
+			{selectable && !thumbnail && (
+				<div className="flex justify-end px-3 pt-2">
+					<button
+						type="button"
+						onClick={handleSelectClick}
+						className={cn(
+							"flex size-5 items-center justify-center rounded border-2 transition-colors",
+							selected
+								? "border-primary bg-primary text-primary-foreground"
+								: selectDisabled
+									? "border-muted-foreground/30 bg-muted/50 cursor-not-allowed"
+									: "border-muted-foreground/50 bg-background/80 hover:border-primary",
+						)}
+					>
+						{selected && (
+							<svg viewBox="0 0 16 16" fill="currentColor" className="size-3">
+								<path d="M12.207 4.793a1 1 0 0 1 0 1.414l-5 5a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L6.5 9.086l4.293-4.293a1 1 0 0 1 1.414 0z" />
+							</svg>
+						)}
+					</button>
 				</div>
 			)}
 
