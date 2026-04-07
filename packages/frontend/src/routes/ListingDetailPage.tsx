@@ -4,17 +4,27 @@ import {
 	ChevronDownIcon,
 	ChevronUpIcon,
 	ExternalLinkIcon,
+	GitCompareArrows,
 	HeartIcon,
 	ImageIcon,
+	Loader2Icon,
 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { type ListingDetailAnalysis, useListing, useToggleFavorite } from "@/api";
-import { ScoreBar } from "@/components/ScoreBar";
+import { type ListingDetailAnalysis, useListing, useListings, useToggleFavorite } from "@/api";
+import { ScoreBar, ScoreCircle } from "@/components/ScoreBar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+	Sheet,
+	SheetContent,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
+} from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { routes } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 
 const formatPrice = (cents: number): string => `${(cents / 100).toFixed(2)} €`;
@@ -28,6 +38,36 @@ const ListingDetailPage = () => {
 	const [isFavorite, setIsFavorite] = useState(false);
 	const [reasoningExpanded, setReasoningExpanded] = useState(false);
 	const [currentImage, setCurrentImage] = useState(0);
+	const [compareSheetOpen, setCompareSheetOpen] = useState(false);
+	const [compareIds, setCompareIds] = useState<Set<string>>(new Set());
+
+	const {
+		data: listingsData,
+		fetchNextPage: fetchMoreListings,
+		hasNextPage: hasMoreListings,
+		isFetchingNextPage: isFetchingMoreListings,
+	} = useListings(searchId, { sort: "score_desc" });
+
+	const otherListings = (listingsData?.pages.flatMap((p) => p.listings) ?? []).filter(
+		(l) => l.id !== listingId,
+	);
+
+	const handleCompareSelect = (lid: string) => {
+		setCompareIds((prev) => {
+			const next = new Set(prev);
+			if (next.has(lid)) {
+				next.delete(lid);
+			} else if (next.size < 3) {
+				next.add(lid);
+			}
+			return next;
+		});
+	};
+
+	const openCompareSheet = () => {
+		setCompareIds(new Set());
+		setCompareSheetOpen(true);
+	};
 
 	const listing = data?.listing;
 	const analysis: ListingDetailAnalysis | null | undefined = data?.analysis;
@@ -252,13 +292,115 @@ const ListingDetailPage = () => {
 
 			<Separator />
 
-			{/* External link */}
-			<a href={listing.url} target="_blank" rel="noopener noreferrer">
-				<Button className="w-full" variant="default">
-					<ExternalLinkIcon />
-					Voir sur Leboncoin
+			{/* Action buttons */}
+			<div className="flex gap-2">
+				<a href={listing.url} target="_blank" rel="noopener noreferrer" className="flex-1">
+					<Button className="w-full" variant="default">
+						<ExternalLinkIcon />
+						Voir sur Leboncoin
+					</Button>
+				</a>
+				<Button variant="outline" onClick={openCompareSheet}>
+					<GitCompareArrows className="size-4" />
+					Comparer
 				</Button>
-			</a>
+			</div>
+
+			{/* Compare picker sheet */}
+			<Sheet open={compareSheetOpen} onOpenChange={setCompareSheetOpen}>
+				<SheetContent side="right" className="flex flex-col">
+					<SheetHeader>
+						<SheetTitle>Choisir des annonces à comparer</SheetTitle>
+					</SheetHeader>
+					<div className="flex-1 overflow-y-auto">
+						<div className="flex flex-col gap-1 py-2">
+							{otherListings.map((item) => {
+								const isSelected = compareIds.has(item.id);
+								const isDisabled = compareIds.size >= 3 && !isSelected;
+								const itemScore = item.analysis?.score ?? null;
+								return (
+									<button
+										key={item.id}
+										type="button"
+										onClick={() => !isDisabled && handleCompareSelect(item.id)}
+										className={cn(
+											"flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors",
+											isSelected
+												? "bg-primary/10 border border-primary/30"
+												: isDisabled
+													? "opacity-50 cursor-not-allowed"
+													: "hover:bg-muted",
+										)}
+									>
+										<div
+											className={cn(
+												"flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors",
+												isSelected
+													? "border-primary bg-primary text-primary-foreground"
+													: "border-muted-foreground/50",
+											)}
+										>
+											{isSelected && (
+												<svg viewBox="0 0 16 16" fill="currentColor" className="size-3">
+													<path d="M12.207 4.793a1 1 0 0 1 0 1.414l-5 5a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L6.5 9.086l4.293-4.293a1 1 0 0 1 1.414 0z" />
+												</svg>
+											)}
+										</div>
+										{item.images[0] ? (
+											<img
+												src={item.images[0]}
+												alt=""
+												className="size-10 shrink-0 rounded object-cover"
+											/>
+										) : (
+											<div className="size-10 shrink-0 rounded bg-muted" />
+										)}
+										<div className="flex-1 min-w-0">
+											<p className="truncate text-sm font-medium">{item.title}</p>
+											<p className="text-xs text-muted-foreground">
+												{new Intl.NumberFormat("fr-FR", {
+													style: "currency",
+													currency: "EUR",
+													minimumFractionDigits: 0,
+												}).format(item.price / 100)}
+											</p>
+										</div>
+										{itemScore !== null && <ScoreCircle score={itemScore} />}
+									</button>
+								);
+							})}
+							{hasMoreListings && (
+								<Button
+									variant="ghost"
+									size="sm"
+									className="mx-auto"
+									onClick={() => fetchMoreListings()}
+									disabled={isFetchingMoreListings}
+								>
+									{isFetchingMoreListings ? (
+										<Loader2Icon className="animate-spin size-4" />
+									) : (
+										"Charger plus..."
+									)}
+								</Button>
+							)}
+						</div>
+					</div>
+					<SheetFooter className="border-t pt-3">
+						<Button
+							className="w-full"
+							disabled={compareIds.size === 0}
+							onClick={() => {
+								const ids = [listingId, ...compareIds].join(",");
+								navigate(`${routes.searchCompare(searchId)}?ids=${ids}`);
+							}}
+						>
+							<GitCompareArrows className="size-4" />
+							Comparer ({compareIds.size + 1})
+						</Button>
+					</SheetFooter>
+				</SheetContent>
+			</Sheet>
 		</div>
 	);
 };
