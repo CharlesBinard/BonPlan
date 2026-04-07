@@ -79,7 +79,13 @@ The main risk is a user accidentally breaking their own scoring quality (e.g., "
 ### Input validation
 
 - Server-side: `z.string().max(500)` — length only, no content filtering
-- No HTML/script injection risk — instructions are only sent to the LLM, never rendered as HTML
+- **Empty string normalization:** Gateway handlers normalize `""` and whitespace-only strings to `null` before writing to DB, ensuring a single canonical "no instructions" representation
+- No HTML/script injection risk — instructions are only sent to the LLM, never rendered as HTML (React auto-escapes)
+
+### Future considerations
+
+- If shared searches or team accounts are ever introduced, the trust model must be revisited (a user's instructions could affect another user's analysis)
+- The LLM's `reasoning` field may quote user instructions — acceptable today (same user), but relevant if analysis data is ever shared publicly
 
 ## API Changes
 
@@ -97,7 +103,7 @@ The main risk is a user accidentally breaking their own scoring quality (e.g., "
 
 **Gateway:**
 - `packages/gateway/src/routes/searches/searches.schemas.ts` — `createSearchSchema`, `updateSearchSchema`
-- `packages/gateway/src/routes/settings/settings.routes.ts` — settings update schema
+- `packages/gateway/src/routes/settings/settings.routes.ts` — settings update schema AND GET response schema (inline)
 - `packages/gateway/src/schemas/shared.ts` — `searchResponseSchema`
 
 **Frontend:**
@@ -126,7 +132,7 @@ The main risk is a user accidentally breaking their own scoring quality (e.g., "
 - Label: "Instructions spécifiques (optionnel)"
 - Placeholder: "Ex: Je cherche uniquement avec boîte d'origine..."
 - Character counter: `{length}/500`
-- Collapsed by default behind an "Options avancées" toggle to keep the form clean
+- Hidden by default behind a Switch toggle (same pattern as the webhook toggle), not a collapsible — no `<Collapsible>` component exists
 
 ### Search detail page (`SearchDetailPage.tsx`)
 
@@ -140,7 +146,11 @@ The main risk is a user accidentally breaking their own scoring quality (e.g., "
 
 ### Orval regeneration
 
-After gateway schema changes, run `bun run generate` in the frontend package to regenerate the API client.
+After gateway schema changes, run `bun run generate` in the frontend package to regenerate the API client. This is **critical path** — the generated types (`PostApiSearchesBody`, `PatchApiSearchesIdBody`, `PatchApiSettingsBody`, `GetApiSettings200`, `GetApiSearchesId200Search`) must be updated before frontend code can be type-safe.
+
+### Behavioral note
+
+Instructions changes take effect on the **next analysis cycle**, not retroactively. If a user updates instructions while an analysis batch is in progress, the current batch uses the old instructions (already fetched from DB). This is expected behavior.
 
 ## Files Modified
 
@@ -148,17 +158,18 @@ After gateway schema changes, run `bun run generate` in the frontend package to 
 |------|--------|
 | `packages/shared/src/db/schema.ts` | Add 2 columns |
 | `packages/shared/drizzle/0009_*.sql` | New migration |
-| `packages/analyzer/src/prompts.ts` | Add `customInstructions` param, inject section |
-| `packages/analyzer/src/analyze.ts` | Pass instructions to prompt builders |
+| `packages/analyzer/src/prompts.ts` | Add `customInstructions` param to `PromptInput` and `BatchPromptInput` types, inject `## User Preferences` section |
+| `packages/analyzer/src/analyze.ts` | Add `aiCustomInstructions` to user SELECT, pass concatenated instructions to prompt builders |
 | `packages/gateway/src/routes/searches/searches.schemas.ts` | Add field to create/update schemas |
-| `packages/gateway/src/routes/searches/searches.handlers.ts` | Pass field through on create/update |
-| `packages/gateway/src/routes/settings/settings.routes.ts` | Add field to settings schema |
-| `packages/gateway/src/routes/settings/settings.handlers.ts` | Read/write `aiCustomInstructions` |
-| `packages/gateway/src/schemas/shared.ts` | Add to `searchResponseSchema` |
+| `packages/gateway/src/routes/searches/searches.handlers.ts` | Pass field through on create, normalize empty→null |
+| `packages/gateway/src/routes/settings/settings.routes.ts` | Add field to settings update schema AND GET response schema |
+| `packages/gateway/src/routes/settings/settings.handlers.ts` | Read/write `aiCustomInstructions`, add to no-op guard, normalize empty→null |
+| `packages/gateway/src/schemas/shared.ts` | Add `customInstructions` to `searchResponseSchema` |
+| `packages/frontend/src/components/ui/textarea.tsx` | **New file** — shadcn-style Textarea component |
 | `packages/frontend/src/forms/schemas.ts` | Add fields to form schemas |
-| `packages/frontend/src/routes/SettingsPage.tsx` | Add textarea in AI tab |
-| `packages/frontend/src/routes/SearchesPage.tsx` | Add textarea in create dialog |
-| `packages/frontend/src/routes/SearchDetailPage.tsx` | Display + edit dialog |
+| `packages/frontend/src/routes/SettingsPage.tsx` | Add textarea + character counter in AI tab |
+| `packages/frontend/src/routes/SearchesPage.tsx` | Add textarea + toggle in create dialog |
+| `packages/frontend/src/routes/SearchDetailPage.tsx` | Display + edit dialog for instructions |
 
 ## Out of Scope
 
