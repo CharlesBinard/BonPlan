@@ -103,13 +103,13 @@ const SearchDetailPage = () => {
 		});
 	};
 
-	const handleSelect = (id: string) => {
+	const handleSelect = (listingId: string) => {
 		setSelectedIds((prev) => {
 			const next = new Set(prev);
-			if (next.has(id)) {
-				next.delete(id);
+			if (next.has(listingId)) {
+				next.delete(listingId);
 			} else if (next.size < 4) {
-				next.add(id);
+				next.add(listingId);
 			}
 			return next;
 		});
@@ -286,11 +286,7 @@ const SearchDetailPage = () => {
 						{minScore}
 					</Badge>
 				</div>
-				<Button
-					size="sm"
-					variant={selectionMode ? "default" : "outline"}
-					onClick={toggleSelectionMode}
-				>
+				<Button size="sm" variant={selectionMode ? "default" : "outline"} onClick={toggleSelectionMode}>
 					<GitCompareArrows className="size-4" />
 					{selectionMode ? "Annuler" : "Comparer"}
 				</Button>
@@ -299,9 +295,8 @@ const SearchDetailPage = () => {
 			{/* Listings grid */}
 			{listingsLoading ? (
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-					{Array.from({ length: 8 }).map((_, i) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton placeholder
-						<Skeleton key={i} className="h-56 rounded-xl" />
+					{Array.from({ length: 8 }, (_, i) => `skeleton-${i}`).map((key) => (
+						<Skeleton key={key} className="h-56 rounded-xl" />
 					))}
 				</div>
 			) : allListings.length === 0 ? (
@@ -351,10 +346,7 @@ const SearchDetailPage = () => {
 						<Button variant="outline" size="sm" onClick={toggleSelectionMode}>
 							Annuler
 						</Button>
-						<Button
-							size="sm"
-							onClick={() => navigate(`${routes.searchCompare(id)}?ids=${[...selectedIds].join(",")}`)}
-						>
+						<Button size="sm" onClick={() => navigate(`${routes.searchCompare(id)}?ids=${[...selectedIds].join(",")}`)}>
 							<GitCompareArrows className="size-4" />
 							Comparer
 						</Button>

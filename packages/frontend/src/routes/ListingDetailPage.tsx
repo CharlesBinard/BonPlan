@@ -16,13 +16,7 @@ import { ScoreBar, ScoreCircle } from "@/components/ScoreBar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-	Sheet,
-	SheetContent,
-	SheetFooter,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { routes } from "@/constants/routes";
 import { cn } from "@/lib/utils";
@@ -48,9 +42,7 @@ const ListingDetailPage = () => {
 		isFetchingNextPage: isFetchingMoreListings,
 	} = useListings(searchId, { sort: "score_desc" });
 
-	const otherListings = (listingsData?.pages.flatMap((p) => p.listings) ?? []).filter(
-		(l) => l.id !== listingId,
-	);
+	const otherListings = (listingsData?.pages.flatMap((p) => p.listings) ?? []).filter((l) => l.id !== listingId);
 
 	const handleCompareSelect = (lid: string) => {
 		setCompareIds((prev) => {
@@ -133,8 +125,7 @@ const ListingDetailPage = () => {
 							{listing.images.map((img, i) => (
 								<button
 									type="button"
-									// biome-ignore lint/suspicious/noArrayIndexKey: image thumbnails have no stable id
-									key={i}
+									key={img}
 									onClick={() => setCurrentImage(i)}
 									aria-label={`Image ${i + 1}`}
 									className={cn(
@@ -302,7 +293,7 @@ const ListingDetailPage = () => {
 				</a>
 				<Button variant="outline" onClick={openCompareSheet}>
 					<GitCompareArrows className="size-4" />
-					Comparer
+					Comparer avec...
 				</Button>
 			</div>
 
@@ -335,23 +326,18 @@ const ListingDetailPage = () => {
 										<div
 											className={cn(
 												"flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors",
-												isSelected
-													? "border-primary bg-primary text-primary-foreground"
-													: "border-muted-foreground/50",
+												isSelected ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/50",
 											)}
 										>
 											{isSelected && (
-												<svg viewBox="0 0 16 16" fill="currentColor" className="size-3">
+												<svg viewBox="0 0 16 16" fill="currentColor" className="size-3" aria-hidden="true">
+													<title>Sélectionné</title>
 													<path d="M12.207 4.793a1 1 0 0 1 0 1.414l-5 5a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L6.5 9.086l4.293-4.293a1 1 0 0 1 1.414 0z" />
 												</svg>
 											)}
 										</div>
 										{item.images[0] ? (
-											<img
-												src={item.images[0]}
-												alt=""
-												className="size-10 shrink-0 rounded object-cover"
-											/>
+											<img src={item.images[0]} alt="" className="size-10 shrink-0 rounded object-cover" />
 										) : (
 											<div className="size-10 shrink-0 rounded bg-muted" />
 										)}
@@ -369,6 +355,11 @@ const ListingDetailPage = () => {
 									</button>
 								);
 							})}
+							{otherListings.length === 0 && !hasMoreListings && (
+								<p className="text-sm text-muted-foreground text-center py-8">
+									Aucune autre annonce disponible pour comparer.
+								</p>
+							)}
 							{hasMoreListings && (
 								<Button
 									variant="ghost"
@@ -377,11 +368,7 @@ const ListingDetailPage = () => {
 									onClick={() => fetchMoreListings()}
 									disabled={isFetchingMoreListings}
 								>
-									{isFetchingMoreListings ? (
-										<Loader2Icon className="animate-spin size-4" />
-									) : (
-										"Charger plus..."
-									)}
+									{isFetchingMoreListings ? <Loader2Icon className="animate-spin size-4" /> : "Charger plus..."}
 								</Button>
 							)}
 						</div>

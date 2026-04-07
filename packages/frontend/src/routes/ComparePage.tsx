@@ -1,4 +1,4 @@
-import { AlertTriangleIcon, ArrowLeftIcon, ExternalLinkIcon, XIcon } from "lucide-react";
+import { AlertTriangleIcon, ArrowLeftIcon, Building2Icon, ExternalLinkIcon, UserIcon, XIcon } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -138,15 +138,21 @@ const ComparePage = () => {
 							<th className="sticky left-0 z-10 w-32 bg-background shadow-[2px_0_8px_rgba(0,0,0,0.1)]" />
 							{listings.map((item) => (
 								<th key={item.id} className="min-w-[200px] px-3 pb-3 align-top text-left font-normal">
-									{item.listing.images[0] ? (
-										<img
-											src={item.listing.images[0]}
-											alt={item.listing.title}
-											className="h-24 w-full rounded-lg object-cover mb-2"
-										/>
-									) : (
-										<div className="h-24 w-full rounded-lg bg-muted mb-2" />
-									)}
+									<button
+										type="button"
+										onClick={() => navigate(routes.listingDetail(searchId, item.id))}
+										className="w-full cursor-pointer"
+									>
+										{item.listing.images[0] ? (
+											<img
+												src={item.listing.images[0]}
+												alt={item.listing.title}
+												className="h-24 w-full rounded-lg object-cover mb-2"
+											/>
+										) : (
+											<div className="h-24 w-full rounded-lg bg-muted mb-2" />
+										)}
+									</button>
 									<button
 										type="button"
 										onClick={() => navigate(routes.listingDetail(searchId, item.id))}
@@ -268,13 +274,17 @@ const ComparePage = () => {
 							<td className="sticky left-0 z-10 bg-background py-2.5 pr-3 shadow-[2px_0_8px_rgba(0,0,0,0.1)]">
 								<span className="text-xs font-medium text-muted-foreground">Vendeur</span>
 							</td>
-							{listings.map((item) => (
-								<td key={item.id} className="px-3 py-2.5">
-									<span className="text-xs text-muted-foreground">
-										{sellerLabels[item.listing.sellerType] ?? item.listing.sellerType}
-									</span>
-								</td>
-							))}
+							{listings.map((item) => {
+								const SellerIcon = item.listing.sellerType === "pro" ? Building2Icon : UserIcon;
+								return (
+									<td key={item.id} className="px-3 py-2.5">
+										<span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+											<SellerIcon className="size-3" />
+											{sellerLabels[item.listing.sellerType] ?? item.listing.sellerType}
+										</span>
+									</td>
+								);
+							})}
 						</tr>
 						<tr className="border-t border-border">
 							<td className="sticky left-0 z-10 bg-background py-2.5 pr-3 shadow-[2px_0_8px_rgba(0,0,0,0.1)]">
