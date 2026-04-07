@@ -108,13 +108,23 @@ In `packages/gateway/src/routes/searches/searches.handlers.ts`, in the `createSe
 customInstructions: body.customInstructions?.trim() || null,
 ```
 
-- [ ] **Step 5: Run typecheck**
+- [ ] **Step 5: Normalize `customInstructions` in update handler**
+
+In `packages/gateway/src/routes/searches/searches.handlers.ts`, in the `updateSearchRoute` handler, the body is spread directly into the DB update with `{ ...body, updatedAt: new Date() }` (line 142). This skips `trim() || null` normalization. Add normalization before the spread, between the ownership check and the update call (after line 138):
+
+```typescript
+if (body.customInstructions !== undefined) {
+	body.customInstructions = body.customInstructions?.trim() || null;
+}
+```
+
+- [ ] **Step 6: Run typecheck**
 
 Run: `cd packages/gateway && bunx tsc --noEmit`
 
-Expected: PASS. The update handler uses `{ ...body }` spread so `customInstructions` flows through automatically.
+Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add packages/gateway/src/routes/searches/ packages/gateway/src/schemas/shared.ts
@@ -282,12 +292,11 @@ After the `userModel` declaration (line 471), add the concatenation logic:
 ```typescript
 const instructionParts: string[] = [];
 if (user.aiCustomInstructions?.trim()) instructionParts.push(user.aiCustomInstructions.trim());
-const searchInstructions = (search as Record<string, unknown>).customInstructions as string | null;
-if (searchInstructions?.trim()) instructionParts.push(searchInstructions.trim());
+if (search.customInstructions?.trim()) instructionParts.push(search.customInstructions.trim());
 const customInstructions = instructionParts.length > 0 ? instructionParts.join("\n\n") : undefined;
 ```
 
-Note: The search is fetched with `db.select().from(searches)` (full row) so `customInstructions` is available, but since the TypeScript type may not yet reflect the new column at compile time, we access it via record cast. After running `bunx drizzle-kit generate` and rebuilding types this can be cleaned up to `search.customInstructions`.
+Note: The search is fetched with `db.select().from(searches)` (full row) so `customInstructions` is available. The user SELECT uses explicit fields, so `aiCustomInstructions` was added in Step 1. Both columns exist in the Drizzle schema (Task 1), so types are correct.
 
 - [ ] **Step 3: Pass `customInstructions` to `analyzeSingle`**
 
@@ -333,9 +342,16 @@ const prompt = buildBatchAnalysisPrompt({
 
 Also pass `customInstructions` to the fallback `analyzeSingle` calls inside `analyzeBatch`.
 
-- [ ] **Step 5: Update all call sites in the consumer**
+- [ ] **Step 5: Update all 4 call sites**
 
-In the `startAnalysisConsumer` function, pass `customInstructions` to every `analyzeSingle` and `analyzeBatch` call (there are 2 calls in the batch processing loop — one for single, one for batch). Add `customInstructions` as the last argument.
+There are **4 total call sites** that need `customInstructions` as the last argument:
+
+1. **Consumer loop — single item** (~line 528): `analyzeSingle(...)` call when `batch.length === 1`
+2. **Consumer loop — batch** (~line 544): `analyzeBatch(...)` call for multi-item batches
+3. **Inside `analyzeBatch` — error fallback** (~line 305): `analyzeSingle(...)` called when batch generation fails entirely
+4. **Inside `analyzeBatch` — missing-items retry** (~line 372): `analyzeSingle(...)` called for items missing from batch results
+
+All 4 must pass `customInstructions` as the last positional argument. TypeScript will error on any missed site since the parameter is required (`string | undefined`).
 
 - [ ] **Step 6: Run typecheck**
 
@@ -365,24 +381,25 @@ git commit -m "feat(analyzer): wire custom instructions from DB to prompt builde
 
 - [ ] **Step 1: Create the Textarea component**
 
-Create `packages/frontend/src/components/ui/textarea.tsx`:
+Create `packages/frontend/src/components/ui/textarea.tsx`. Follow the existing Input component pattern (`packages/frontend/src/components/ui/input.tsx`) — function declaration, `data-slot`, same design tokens:
 
 ```tsx
+import type * as React from "react";
+
 import { cn } from "@/lib/utils";
 
-type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
-
-const Textarea = ({ className, ...props }: TextareaProps) => {
+function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
 	return (
 		<textarea
+			data-slot="textarea"
 			className={cn(
-				"border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-[80px] w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+				"w-full min-h-[80px] rounded-lg border border-input bg-transparent px-2.5 py-2 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
 				className,
 			)}
 			{...props}
 		/>
 	);
-};
+}
 
 export { Textarea };
 ```
@@ -425,7 +442,7 @@ customInstructions: z.string().max(500, "Maximum 500 caractères").optional().nu
 
 - [ ] **Step 3: Regenerate the Orval API client**
 
-Run: `cd packages/frontend && bun run generate`
+Run: `cd packages/frontend && bun run generate-api`
 
 Expected: The generated files in `src/api/generated/` are updated with the new fields on request/response types.
 
