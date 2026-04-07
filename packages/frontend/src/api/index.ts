@@ -335,4 +335,3 @@ export const useChangePassword = () => {
 		onSuccess: () => toast.success("Mot de passe modifié"),
 	});
 };
-

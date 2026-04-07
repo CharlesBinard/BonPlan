@@ -5,887 +5,882 @@
  * Deal-finding API for LeBonCoin
  * OpenAPI spec version: 1.0.0
  */
-export type GetHealth200Status = typeof GetHealth200Status[keyof typeof GetHealth200Status];
-
+export type GetHealth200Status = (typeof GetHealth200Status)[keyof typeof GetHealth200Status];
 
 export const GetHealth200Status = {
-  ok: 'ok',
-  degraded: 'degraded',
+	ok: "ok",
+	degraded: "degraded",
 } as const;
 
-export type GetHealth200Checks = {[key: string]: string};
+export type GetHealth200Checks = { [key: string]: string };
 
-export type GetHealth200DeadLetterDepth = {[key: string]: number};
+export type GetHealth200DeadLetterDepth = { [key: string]: number };
 
 export type GetHealth200 = {
-  status: GetHealth200Status;
-  checks: GetHealth200Checks;
-  deadLetterDepth: GetHealth200DeadLetterDepth;
+	status: GetHealth200Status;
+	checks: GetHealth200Checks;
+	deadLetterDepth: GetHealth200DeadLetterDepth;
 };
 
-export type GetHealth503Status = typeof GetHealth503Status[keyof typeof GetHealth503Status];
-
+export type GetHealth503Status = (typeof GetHealth503Status)[keyof typeof GetHealth503Status];
 
 export const GetHealth503Status = {
-  ok: 'ok',
-  degraded: 'degraded',
+	ok: "ok",
+	degraded: "degraded",
 } as const;
 
-export type GetHealth503Checks = {[key: string]: string};
+export type GetHealth503Checks = { [key: string]: string };
 
-export type GetHealth503DeadLetterDepth = {[key: string]: number};
+export type GetHealth503DeadLetterDepth = { [key: string]: number };
 
 export type GetHealth503 = {
-  status: GetHealth503Status;
-  checks: GetHealth503Checks;
-  deadLetterDepth: GetHealth503DeadLetterDepth;
+	status: GetHealth503Status;
+	checks: GetHealth503Checks;
+	deadLetterDepth: GetHealth503DeadLetterDepth;
 };
 
 export type GetApiGeocodeSearchParams = {
-/**
- * @minLength 2
- * @maxLength 200
- */
-q: string;
-/**
- * @minimum 1
- * @maximum 10
- */
-limit?: number;
+	/**
+	 * @minLength 2
+	 * @maxLength 200
+	 */
+	q: string;
+	/**
+	 * @minimum 1
+	 * @maximum 10
+	 */
+	limit?: number;
 };
 
 export type GetApiGeocodeSearch200ResultsItem = {
-  city: string;
-  postcode: string;
-  latitude: number;
-  longitude: number;
+	city: string;
+	postcode: string;
+	latitude: number;
+	longitude: number;
 };
 
 export type GetApiGeocodeSearch200 = {
-  results: GetApiGeocodeSearch200ResultsItem[];
+	results: GetApiGeocodeSearch200ResultsItem[];
 };
 
 export type GetApiGeocodeSearch502 = {
-  error: string;
+	error: string;
 };
 
-export type GetApiSearches200SearchesItemStatus = typeof GetApiSearches200SearchesItemStatus[keyof typeof GetApiSearches200SearchesItemStatus];
-
+export type GetApiSearches200SearchesItemStatus =
+	(typeof GetApiSearches200SearchesItemStatus)[keyof typeof GetApiSearches200SearchesItemStatus];
 
 export const GetApiSearches200SearchesItemStatus = {
-  pending: 'pending',
-  mapping: 'mapping',
-  active: 'active',
-  paused: 'paused',
-  blocked: 'blocked',
+	pending: "pending",
+	mapping: "mapping",
+	active: "active",
+	paused: "paused",
+	blocked: "blocked",
 } as const;
 
 export type GetApiSearches200SearchesItemAiContextPriceRange = {
-  min: number;
-  max: number;
+	min: number;
+	max: number;
 } | null;
 
 export type GetApiSearches200SearchesItemAiContext = {
-  keywordVariations: string[];
-  judgmentCriteria: string;
-  priceRange: GetApiSearches200SearchesItemAiContextPriceRange;
-  confidence: number;
-  searchUrls: string[];
-  [key: string]: unknown | null;
+	keywordVariations: string[];
+	judgmentCriteria: string;
+	priceRange: GetApiSearches200SearchesItemAiContextPriceRange;
+	confidence: number;
+	searchUrls: string[];
+	[key: string]: unknown | null;
 } | null;
 
 export type GetApiSearches200SearchesItem = {
-  id: string;
-  userId: string;
-  query: string;
-  location: string;
-  postcode: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  radiusKm: number;
-  intervalMin: number;
-  status: GetApiSearches200SearchesItemStatus;
-  aiContext: GetApiSearches200SearchesItemAiContext;
-  notifyWebhook: string | null;
-  minScore: number;
-  allowBundles: boolean;
-  analyzeImages: boolean;
-  customInstructions: string | null;
-  lastScrapedAt: string | null;
-  lastError: string | null;
-  blockedUntil: string | null;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	userId: string;
+	query: string;
+	location: string;
+	postcode: string | null;
+	latitude: number | null;
+	longitude: number | null;
+	radiusKm: number;
+	intervalMin: number;
+	status: GetApiSearches200SearchesItemStatus;
+	aiContext: GetApiSearches200SearchesItemAiContext;
+	notifyWebhook: string | null;
+	minScore: number;
+	allowBundles: boolean;
+	analyzeImages: boolean;
+	customInstructions: string | null;
+	lastScrapedAt: string | null;
+	lastError: string | null;
+	blockedUntil: string | null;
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type GetApiSearches200 = {
-  searches: GetApiSearches200SearchesItem[];
+	searches: GetApiSearches200SearchesItem[];
 };
 
 export type PostApiSearchesBody = {
-  /**
-     * @minLength 1
-     * @maxLength 500
-     */
-  query: string;
-  /** @maxLength 200 */
-  location?: string;
-  /** @maxLength 10 */
-  postcode?: string | null;
-  /**
-     * @minimum -90
-     * @maximum 90
-     */
-  latitude?: number | null;
-  /**
-     * @minimum -180
-     * @maximum 180
-     */
-  longitude?: number | null;
-  /**
-     * @minimum 1
-     * @maximum 500
-     */
-  radiusKm: number;
-  /**
-     * @minimum 5
-     * @maximum 1440
-     */
-  intervalMin?: number;
-  notifyWebhook?: string | null;
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
-  minScore?: number;
-  allowBundles?: boolean;
-  analyzeImages?: boolean;
-  /** @maxLength 500 */
-  customInstructions?: string | null;
+	/**
+	 * @minLength 1
+	 * @maxLength 500
+	 */
+	query: string;
+	/** @maxLength 200 */
+	location?: string;
+	/** @maxLength 10 */
+	postcode?: string | null;
+	/**
+	 * @minimum -90
+	 * @maximum 90
+	 */
+	latitude?: number | null;
+	/**
+	 * @minimum -180
+	 * @maximum 180
+	 */
+	longitude?: number | null;
+	/**
+	 * @minimum 1
+	 * @maximum 500
+	 */
+	radiusKm: number;
+	/**
+	 * @minimum 5
+	 * @maximum 1440
+	 */
+	intervalMin?: number;
+	notifyWebhook?: string | null;
+	/**
+	 * @minimum 0
+	 * @maximum 100
+	 */
+	minScore?: number;
+	allowBundles?: boolean;
+	analyzeImages?: boolean;
+	/** @maxLength 500 */
+	customInstructions?: string | null;
 };
 
-export type PostApiSearches201SearchStatus = typeof PostApiSearches201SearchStatus[keyof typeof PostApiSearches201SearchStatus];
-
+export type PostApiSearches201SearchStatus =
+	(typeof PostApiSearches201SearchStatus)[keyof typeof PostApiSearches201SearchStatus];
 
 export const PostApiSearches201SearchStatus = {
-  pending: 'pending',
-  mapping: 'mapping',
-  active: 'active',
-  paused: 'paused',
-  blocked: 'blocked',
+	pending: "pending",
+	mapping: "mapping",
+	active: "active",
+	paused: "paused",
+	blocked: "blocked",
 } as const;
 
 export type PostApiSearches201SearchAiContextPriceRange = {
-  min: number;
-  max: number;
+	min: number;
+	max: number;
 } | null;
 
 export type PostApiSearches201SearchAiContext = {
-  keywordVariations: string[];
-  judgmentCriteria: string;
-  priceRange: PostApiSearches201SearchAiContextPriceRange;
-  confidence: number;
-  searchUrls: string[];
-  [key: string]: unknown | null;
+	keywordVariations: string[];
+	judgmentCriteria: string;
+	priceRange: PostApiSearches201SearchAiContextPriceRange;
+	confidence: number;
+	searchUrls: string[];
+	[key: string]: unknown | null;
 } | null;
 
 export type PostApiSearches201Search = {
-  id: string;
-  userId: string;
-  query: string;
-  location: string;
-  postcode: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  radiusKm: number;
-  intervalMin: number;
-  status: PostApiSearches201SearchStatus;
-  aiContext: PostApiSearches201SearchAiContext;
-  notifyWebhook: string | null;
-  minScore: number;
-  allowBundles: boolean;
-  analyzeImages: boolean;
-  customInstructions: string | null;
-  lastScrapedAt: string | null;
-  lastError: string | null;
-  blockedUntil: string | null;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	userId: string;
+	query: string;
+	location: string;
+	postcode: string | null;
+	latitude: number | null;
+	longitude: number | null;
+	radiusKm: number;
+	intervalMin: number;
+	status: PostApiSearches201SearchStatus;
+	aiContext: PostApiSearches201SearchAiContext;
+	notifyWebhook: string | null;
+	minScore: number;
+	allowBundles: boolean;
+	analyzeImages: boolean;
+	customInstructions: string | null;
+	lastScrapedAt: string | null;
+	lastError: string | null;
+	blockedUntil: string | null;
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type PostApiSearches201 = {
-  search: PostApiSearches201Search;
+	search: PostApiSearches201Search;
 };
 
 export type PostApiSearches400 = {
-  error: string | (unknown | null)[];
+	error: string | (unknown | null)[];
 };
 
 export type PostApiSearches403 = {
-  error: string;
+	error: string;
 };
 
 export type PostApiSearches500 = {
-  error: string;
+	error: string;
 };
 
-export type GetApiSearchesId200SearchStatus = typeof GetApiSearchesId200SearchStatus[keyof typeof GetApiSearchesId200SearchStatus];
-
+export type GetApiSearchesId200SearchStatus =
+	(typeof GetApiSearchesId200SearchStatus)[keyof typeof GetApiSearchesId200SearchStatus];
 
 export const GetApiSearchesId200SearchStatus = {
-  pending: 'pending',
-  mapping: 'mapping',
-  active: 'active',
-  paused: 'paused',
-  blocked: 'blocked',
+	pending: "pending",
+	mapping: "mapping",
+	active: "active",
+	paused: "paused",
+	blocked: "blocked",
 } as const;
 
 export type GetApiSearchesId200SearchAiContextPriceRange = {
-  min: number;
-  max: number;
+	min: number;
+	max: number;
 } | null;
 
 export type GetApiSearchesId200SearchAiContext = {
-  keywordVariations: string[];
-  judgmentCriteria: string;
-  priceRange: GetApiSearchesId200SearchAiContextPriceRange;
-  confidence: number;
-  searchUrls: string[];
-  [key: string]: unknown | null;
+	keywordVariations: string[];
+	judgmentCriteria: string;
+	priceRange: GetApiSearchesId200SearchAiContextPriceRange;
+	confidence: number;
+	searchUrls: string[];
+	[key: string]: unknown | null;
 } | null;
 
 export type GetApiSearchesId200Search = {
-  id: string;
-  userId: string;
-  query: string;
-  location: string;
-  postcode: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  radiusKm: number;
-  intervalMin: number;
-  status: GetApiSearchesId200SearchStatus;
-  aiContext: GetApiSearchesId200SearchAiContext;
-  notifyWebhook: string | null;
-  minScore: number;
-  allowBundles: boolean;
-  analyzeImages: boolean;
-  customInstructions: string | null;
-  lastScrapedAt: string | null;
-  lastError: string | null;
-  blockedUntil: string | null;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	userId: string;
+	query: string;
+	location: string;
+	postcode: string | null;
+	latitude: number | null;
+	longitude: number | null;
+	radiusKm: number;
+	intervalMin: number;
+	status: GetApiSearchesId200SearchStatus;
+	aiContext: GetApiSearchesId200SearchAiContext;
+	notifyWebhook: string | null;
+	minScore: number;
+	allowBundles: boolean;
+	analyzeImages: boolean;
+	customInstructions: string | null;
+	lastScrapedAt: string | null;
+	lastError: string | null;
+	blockedUntil: string | null;
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type GetApiSearchesId200Stats = {
-  listingCount: number;
-  goodDealCount: number;
+	listingCount: number;
+	goodDealCount: number;
 };
 
 export type GetApiSearchesId200 = {
-  search: GetApiSearchesId200Search;
-  stats: GetApiSearchesId200Stats;
+	search: GetApiSearchesId200Search;
+	stats: GetApiSearchesId200Stats;
 };
 
 export type GetApiSearchesId404 = {
-  error: string;
+	error: string;
 };
 
-export type PatchApiSearchesIdBodyStatus = typeof PatchApiSearchesIdBodyStatus[keyof typeof PatchApiSearchesIdBodyStatus];
-
+export type PatchApiSearchesIdBodyStatus =
+	(typeof PatchApiSearchesIdBodyStatus)[keyof typeof PatchApiSearchesIdBodyStatus];
 
 export const PatchApiSearchesIdBodyStatus = {
-  active: 'active',
-  paused: 'paused',
+	active: "active",
+	paused: "paused",
 } as const;
 
 export type PatchApiSearchesIdBody = {
-  /**
-     * @minimum 5
-     * @maximum 1440
-     */
-  intervalMin?: number;
-  notifyWebhook?: string | null;
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
-  minScore?: number;
-  status?: PatchApiSearchesIdBodyStatus;
-  /** @maxLength 500 */
-  customInstructions?: string | null;
+	/**
+	 * @minimum 5
+	 * @maximum 1440
+	 */
+	intervalMin?: number;
+	notifyWebhook?: string | null;
+	/**
+	 * @minimum 0
+	 * @maximum 100
+	 */
+	minScore?: number;
+	status?: PatchApiSearchesIdBodyStatus;
+	/** @maxLength 500 */
+	customInstructions?: string | null;
 };
 
-export type PatchApiSearchesId200SearchStatus = typeof PatchApiSearchesId200SearchStatus[keyof typeof PatchApiSearchesId200SearchStatus];
-
+export type PatchApiSearchesId200SearchStatus =
+	(typeof PatchApiSearchesId200SearchStatus)[keyof typeof PatchApiSearchesId200SearchStatus];
 
 export const PatchApiSearchesId200SearchStatus = {
-  pending: 'pending',
-  mapping: 'mapping',
-  active: 'active',
-  paused: 'paused',
-  blocked: 'blocked',
+	pending: "pending",
+	mapping: "mapping",
+	active: "active",
+	paused: "paused",
+	blocked: "blocked",
 } as const;
 
 export type PatchApiSearchesId200SearchAiContextPriceRange = {
-  min: number;
-  max: number;
+	min: number;
+	max: number;
 } | null;
 
 export type PatchApiSearchesId200SearchAiContext = {
-  keywordVariations: string[];
-  judgmentCriteria: string;
-  priceRange: PatchApiSearchesId200SearchAiContextPriceRange;
-  confidence: number;
-  searchUrls: string[];
-  [key: string]: unknown | null;
+	keywordVariations: string[];
+	judgmentCriteria: string;
+	priceRange: PatchApiSearchesId200SearchAiContextPriceRange;
+	confidence: number;
+	searchUrls: string[];
+	[key: string]: unknown | null;
 } | null;
 
 export type PatchApiSearchesId200Search = {
-  id: string;
-  userId: string;
-  query: string;
-  location: string;
-  postcode: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  radiusKm: number;
-  intervalMin: number;
-  status: PatchApiSearchesId200SearchStatus;
-  aiContext: PatchApiSearchesId200SearchAiContext;
-  notifyWebhook: string | null;
-  minScore: number;
-  allowBundles: boolean;
-  analyzeImages: boolean;
-  customInstructions: string | null;
-  lastScrapedAt: string | null;
-  lastError: string | null;
-  blockedUntil: string | null;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	userId: string;
+	query: string;
+	location: string;
+	postcode: string | null;
+	latitude: number | null;
+	longitude: number | null;
+	radiusKm: number;
+	intervalMin: number;
+	status: PatchApiSearchesId200SearchStatus;
+	aiContext: PatchApiSearchesId200SearchAiContext;
+	notifyWebhook: string | null;
+	minScore: number;
+	allowBundles: boolean;
+	analyzeImages: boolean;
+	customInstructions: string | null;
+	lastScrapedAt: string | null;
+	lastError: string | null;
+	blockedUntil: string | null;
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type PatchApiSearchesId200 = {
-  search: PatchApiSearchesId200Search;
+	search: PatchApiSearchesId200Search;
 };
 
 export type PatchApiSearchesId404 = {
-  error: string;
+	error: string;
 };
 
 export type PatchApiSearchesId500 = {
-  error: string;
+	error: string;
 };
 
 export type DeleteApiSearchesId200 = {
-  success: boolean;
+	success: boolean;
 };
 
 export type DeleteApiSearchesId404 = {
-  error: string;
+	error: string;
 };
 
 export type PostApiSearchesIdTrigger200 = {
-  success: boolean;
+	success: boolean;
 };
 
 export type PostApiSearchesIdTrigger403 = {
-  error: string;
+	error: string;
 };
 
 export type PostApiSearchesIdTrigger404 = {
-  error: string;
+	error: string;
 };
 
 export type PostApiSearchesIdTrigger429 = {
-  error: string;
-  retryAfterSeconds: number;
+	error: string;
+	retryAfterSeconds: number;
 };
 
 export type GetApiSearchesIdListingsParams = {
-cursor?: string;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-sort?: GetApiSearchesIdListingsSort;
-/**
- * @minimum 0
- * @maximum 100
- */
-minScore?: number | null;
+	cursor?: string;
+	/**
+	 * @minimum 1
+	 * @maximum 100
+	 */
+	limit?: number;
+	sort?: GetApiSearchesIdListingsSort;
+	/**
+	 * @minimum 0
+	 * @maximum 100
+	 */
+	minScore?: number | null;
 };
 
-export type GetApiSearchesIdListingsSort = typeof GetApiSearchesIdListingsSort[keyof typeof GetApiSearchesIdListingsSort];
-
+export type GetApiSearchesIdListingsSort =
+	(typeof GetApiSearchesIdListingsSort)[keyof typeof GetApiSearchesIdListingsSort];
 
 export const GetApiSearchesIdListingsSort = {
-  score_desc: 'score_desc',
-  score_asc: 'score_asc',
-  price_asc: 'price_asc',
-  price_desc: 'price_desc',
-  date_desc: 'date_desc',
-  date_asc: 'date_asc',
+	score_desc: "score_desc",
+	score_asc: "score_asc",
+	price_asc: "price_asc",
+	price_desc: "price_desc",
+	date_desc: "date_desc",
+	date_asc: "date_asc",
 } as const;
 
-export type GetApiSearchesIdListings200ListingsItemSellerType = typeof GetApiSearchesIdListings200ListingsItemSellerType[keyof typeof GetApiSearchesIdListings200ListingsItemSellerType];
-
+export type GetApiSearchesIdListings200ListingsItemSellerType =
+	(typeof GetApiSearchesIdListings200ListingsItemSellerType)[keyof typeof GetApiSearchesIdListings200ListingsItemSellerType];
 
 export const GetApiSearchesIdListings200ListingsItemSellerType = {
-  pro: 'pro',
-  particulier: 'particulier',
+	pro: "pro",
+	particulier: "particulier",
 } as const;
 
 export type GetApiSearchesIdListings200ListingsItemAnalysisComparablesItem = {
-  title: string;
-  price: number;
-  source: string;
-  date?: string;
+	title: string;
+	price: number;
+	source: string;
+	date?: string;
 };
 
 export type GetApiSearchesIdListings200ListingsItemAnalysisImageAnalysis = {
-  findings: string[];
-  condition: string;
-  scoreAdjustment: number;
-  originalScore: number;
-  modelUsed: string;
+	findings: string[];
+	condition: string;
+	scoreAdjustment: number;
+	originalScore: number;
+	modelUsed: string;
 } | null;
 
 export type GetApiSearchesIdListings200ListingsItemAnalysis = {
-  id: string;
-  listingId: string;
-  searchId: string;
-  userId: string;
-  matchesQuery: boolean;
-  listingType: string | null;
-  score: number | null;
-  verdict: string;
-  marketPriceLow: number | null;
-  marketPriceHigh: number | null;
-  redFlags: string[];
-  reasoning: string;
-  modelUsed: string;
-  providerUsed: string | null;
-  comparables: GetApiSearchesIdListings200ListingsItemAnalysisComparablesItem[] | null;
-  marketMedian: number | null;
-  discount: number | null;
-  imageAnalysis: GetApiSearchesIdListings200ListingsItemAnalysisImageAnalysis;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	listingId: string;
+	searchId: string;
+	userId: string;
+	matchesQuery: boolean;
+	listingType: string | null;
+	score: number | null;
+	verdict: string;
+	marketPriceLow: number | null;
+	marketPriceHigh: number | null;
+	redFlags: string[];
+	reasoning: string;
+	modelUsed: string;
+	providerUsed: string | null;
+	comparables: GetApiSearchesIdListings200ListingsItemAnalysisComparablesItem[] | null;
+	marketMedian: number | null;
+	discount: number | null;
+	imageAnalysis: GetApiSearchesIdListings200ListingsItemAnalysisImageAnalysis;
+	createdAt: string;
+	updatedAt: string;
 } | null;
 
 export type GetApiSearchesIdListings200ListingsItem = {
-  id: string;
-  searchId: string;
-  userId: string;
-  lbcId: string;
-  title: string;
-  price: number;
-  description: string;
-  images: string[];
-  url: string;
-  sellerType: GetApiSearchesIdListings200ListingsItemSellerType;
-  location: string;
-  rawData?: unknown | null;
-  createdAt: string;
-  updatedAt: string;
-  analysis: GetApiSearchesIdListings200ListingsItemAnalysis;
+	id: string;
+	searchId: string;
+	userId: string;
+	lbcId: string;
+	title: string;
+	price: number;
+	description: string;
+	images: string[];
+	url: string;
+	sellerType: GetApiSearchesIdListings200ListingsItemSellerType;
+	location: string;
+	rawData?: unknown | null;
+	createdAt: string;
+	updatedAt: string;
+	analysis: GetApiSearchesIdListings200ListingsItemAnalysis;
 };
 
 export type GetApiSearchesIdListings200Pagination = {
-  hasMore: boolean;
-  nextCursor: string | null;
+	hasMore: boolean;
+	nextCursor: string | null;
 };
 
 export type GetApiSearchesIdListings200 = {
-  listings: GetApiSearchesIdListings200ListingsItem[];
-  pagination: GetApiSearchesIdListings200Pagination;
+	listings: GetApiSearchesIdListings200ListingsItem[];
+	pagination: GetApiSearchesIdListings200Pagination;
 };
 
 export type GetApiSearchesIdListings404 = {
-  error: string;
+	error: string;
 };
 
-export type GetApiSearchesIdListingsListingId200ListingSellerType = typeof GetApiSearchesIdListingsListingId200ListingSellerType[keyof typeof GetApiSearchesIdListingsListingId200ListingSellerType];
-
+export type GetApiSearchesIdListingsListingId200ListingSellerType =
+	(typeof GetApiSearchesIdListingsListingId200ListingSellerType)[keyof typeof GetApiSearchesIdListingsListingId200ListingSellerType];
 
 export const GetApiSearchesIdListingsListingId200ListingSellerType = {
-  pro: 'pro',
-  particulier: 'particulier',
+	pro: "pro",
+	particulier: "particulier",
 } as const;
 
 export type GetApiSearchesIdListingsListingId200Listing = {
-  id: string;
-  searchId: string;
-  userId: string;
-  lbcId: string;
-  title: string;
-  price: number;
-  description: string;
-  images: string[];
-  url: string;
-  sellerType: GetApiSearchesIdListingsListingId200ListingSellerType;
-  location: string;
-  rawData?: unknown | null;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	searchId: string;
+	userId: string;
+	lbcId: string;
+	title: string;
+	price: number;
+	description: string;
+	images: string[];
+	url: string;
+	sellerType: GetApiSearchesIdListingsListingId200ListingSellerType;
+	location: string;
+	rawData?: unknown | null;
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type GetApiSearchesIdListingsListingId200AnalysisComparablesItem = {
-  title: string;
-  price: number;
-  source: string;
-  date?: string;
+	title: string;
+	price: number;
+	source: string;
+	date?: string;
 };
 
 export type GetApiSearchesIdListingsListingId200AnalysisImageAnalysis = {
-  findings: string[];
-  condition: string;
-  scoreAdjustment: number;
-  originalScore: number;
-  modelUsed: string;
+	findings: string[];
+	condition: string;
+	scoreAdjustment: number;
+	originalScore: number;
+	modelUsed: string;
 } | null;
 
 export type GetApiSearchesIdListingsListingId200Analysis = {
-  id: string;
-  listingId: string;
-  searchId: string;
-  userId: string;
-  matchesQuery: boolean;
-  listingType: string | null;
-  score: number | null;
-  verdict: string;
-  marketPriceLow: number | null;
-  marketPriceHigh: number | null;
-  redFlags: string[];
-  reasoning: string;
-  modelUsed: string;
-  providerUsed: string | null;
-  comparables: GetApiSearchesIdListingsListingId200AnalysisComparablesItem[] | null;
-  marketMedian: number | null;
-  discount: number | null;
-  imageAnalysis: GetApiSearchesIdListingsListingId200AnalysisImageAnalysis;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	listingId: string;
+	searchId: string;
+	userId: string;
+	matchesQuery: boolean;
+	listingType: string | null;
+	score: number | null;
+	verdict: string;
+	marketPriceLow: number | null;
+	marketPriceHigh: number | null;
+	redFlags: string[];
+	reasoning: string;
+	modelUsed: string;
+	providerUsed: string | null;
+	comparables: GetApiSearchesIdListingsListingId200AnalysisComparablesItem[] | null;
+	marketMedian: number | null;
+	discount: number | null;
+	imageAnalysis: GetApiSearchesIdListingsListingId200AnalysisImageAnalysis;
+	createdAt: string;
+	updatedAt: string;
 } | null;
 
 export type GetApiSearchesIdListingsListingId200 = {
-  listing: GetApiSearchesIdListingsListingId200Listing;
-  analysis: GetApiSearchesIdListingsListingId200Analysis;
+	listing: GetApiSearchesIdListingsListingId200Listing;
+	analysis: GetApiSearchesIdListingsListingId200Analysis;
 };
 
 export type GetApiSearchesIdListingsListingId404 = {
-  error: string;
+	error: string;
 };
 
-export type GetApiFavorites200FavoritesItemListingSellerType = typeof GetApiFavorites200FavoritesItemListingSellerType[keyof typeof GetApiFavorites200FavoritesItemListingSellerType];
-
+export type GetApiFavorites200FavoritesItemListingSellerType =
+	(typeof GetApiFavorites200FavoritesItemListingSellerType)[keyof typeof GetApiFavorites200FavoritesItemListingSellerType];
 
 export const GetApiFavorites200FavoritesItemListingSellerType = {
-  pro: 'pro',
-  particulier: 'particulier',
+	pro: "pro",
+	particulier: "particulier",
 } as const;
 
 export type GetApiFavorites200FavoritesItemListing = {
-  id: string;
-  searchId: string;
-  userId: string;
-  lbcId: string;
-  title: string;
-  price: number;
-  description: string;
-  images: string[];
-  url: string;
-  sellerType: GetApiFavorites200FavoritesItemListingSellerType;
-  location: string;
-  rawData?: unknown | null;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	searchId: string;
+	userId: string;
+	lbcId: string;
+	title: string;
+	price: number;
+	description: string;
+	images: string[];
+	url: string;
+	sellerType: GetApiFavorites200FavoritesItemListingSellerType;
+	location: string;
+	rawData?: unknown | null;
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type GetApiFavorites200FavoritesItem = {
-  id: string;
-  userId: string;
-  listingId: string;
-  createdAt: string;
-  listing: GetApiFavorites200FavoritesItemListing;
+	id: string;
+	userId: string;
+	listingId: string;
+	createdAt: string;
+	listing: GetApiFavorites200FavoritesItemListing;
 };
 
 export type GetApiFavorites200 = {
-  favorites: GetApiFavorites200FavoritesItem[];
+	favorites: GetApiFavorites200FavoritesItem[];
 };
 
 export type PostApiFavoritesListingId201 = {
-  success: boolean;
+	success: boolean;
 };
 
 export type DeleteApiFavoritesListingId200 = {
-  success: boolean;
+	success: boolean;
 };
 
 export type DeleteApiFavoritesListingId404 = {
-  error: string;
+	error: string;
 };
 
 export type GetApiNotificationsParams = {
-cursor?: string;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-status?: GetApiNotificationsStatus;
-channel?: GetApiNotificationsChannel;
+	cursor?: string;
+	/**
+	 * @minimum 1
+	 * @maximum 100
+	 */
+	limit?: number;
+	status?: GetApiNotificationsStatus;
+	channel?: GetApiNotificationsChannel;
 };
 
-export type GetApiNotificationsStatus = typeof GetApiNotificationsStatus[keyof typeof GetApiNotificationsStatus];
-
+export type GetApiNotificationsStatus = (typeof GetApiNotificationsStatus)[keyof typeof GetApiNotificationsStatus];
 
 export const GetApiNotificationsStatus = {
-  pending: 'pending',
-  sent: 'sent',
-  failed: 'failed',
+	pending: "pending",
+	sent: "sent",
+	failed: "failed",
 } as const;
 
-export type GetApiNotificationsChannel = typeof GetApiNotificationsChannel[keyof typeof GetApiNotificationsChannel];
-
+export type GetApiNotificationsChannel = (typeof GetApiNotificationsChannel)[keyof typeof GetApiNotificationsChannel];
 
 export const GetApiNotificationsChannel = {
-  webhook: 'webhook',
-  discord: 'discord',
+	webhook: "webhook",
+	discord: "discord",
 } as const;
 
-export type GetApiNotifications200NotificationsItemChannel = typeof GetApiNotifications200NotificationsItemChannel[keyof typeof GetApiNotifications200NotificationsItemChannel];
-
+export type GetApiNotifications200NotificationsItemChannel =
+	(typeof GetApiNotifications200NotificationsItemChannel)[keyof typeof GetApiNotifications200NotificationsItemChannel];
 
 export const GetApiNotifications200NotificationsItemChannel = {
-  webhook: 'webhook',
-  discord: 'discord',
+	webhook: "webhook",
+	discord: "discord",
 } as const;
 
-export type GetApiNotifications200NotificationsItemStatus = typeof GetApiNotifications200NotificationsItemStatus[keyof typeof GetApiNotifications200NotificationsItemStatus];
-
+export type GetApiNotifications200NotificationsItemStatus =
+	(typeof GetApiNotifications200NotificationsItemStatus)[keyof typeof GetApiNotifications200NotificationsItemStatus];
 
 export const GetApiNotifications200NotificationsItemStatus = {
-  pending: 'pending',
-  sent: 'sent',
-  failed: 'failed',
+	pending: "pending",
+	sent: "sent",
+	failed: "failed",
 } as const;
 
 export type GetApiNotifications200NotificationsItem = {
-  id: string;
-  userId: string;
-  searchId: string;
-  analysisId: string;
-  channel: GetApiNotifications200NotificationsItemChannel;
-  status: GetApiNotifications200NotificationsItemStatus;
-  retryCount: number;
-  payload?: unknown | null;
-  error: string | null;
-  createdAt: string;
+	id: string;
+	userId: string;
+	searchId: string;
+	analysisId: string;
+	channel: GetApiNotifications200NotificationsItemChannel;
+	status: GetApiNotifications200NotificationsItemStatus;
+	retryCount: number;
+	payload?: unknown | null;
+	error: string | null;
+	createdAt: string;
 };
 
 export type GetApiNotifications200Pagination = {
-  hasMore: boolean;
-  nextCursor: string | null;
+	hasMore: boolean;
+	nextCursor: string | null;
 };
 
 export type GetApiNotifications200 = {
-  notifications: GetApiNotifications200NotificationsItem[];
-  pagination: GetApiNotifications200Pagination;
+	notifications: GetApiNotifications200NotificationsItem[];
+	pagination: GetApiNotifications200Pagination;
 };
 
 export type GetApiStats200 = {
-  searchCount: number;
-  listingCount: number;
-  favoriteCount: number;
-  goodDealCount: number;
+	searchCount: number;
+	listingCount: number;
+	favoriteCount: number;
+	goodDealCount: number;
 };
 
-export type GetApiStatsGoodDeals200GoodDealsItemSellerType = typeof GetApiStatsGoodDeals200GoodDealsItemSellerType[keyof typeof GetApiStatsGoodDeals200GoodDealsItemSellerType];
-
+export type GetApiStatsGoodDeals200GoodDealsItemSellerType =
+	(typeof GetApiStatsGoodDeals200GoodDealsItemSellerType)[keyof typeof GetApiStatsGoodDeals200GoodDealsItemSellerType];
 
 export const GetApiStatsGoodDeals200GoodDealsItemSellerType = {
-  pro: 'pro',
-  particulier: 'particulier',
+	pro: "pro",
+	particulier: "particulier",
 } as const;
 
 export type GetApiStatsGoodDeals200GoodDealsItemAnalysisComparablesItem = {
-  title: string;
-  price: number;
-  source: string;
-  date?: string;
+	title: string;
+	price: number;
+	source: string;
+	date?: string;
 };
 
 export type GetApiStatsGoodDeals200GoodDealsItemAnalysisImageAnalysis = {
-  findings: string[];
-  condition: string;
-  scoreAdjustment: number;
-  originalScore: number;
-  modelUsed: string;
+	findings: string[];
+	condition: string;
+	scoreAdjustment: number;
+	originalScore: number;
+	modelUsed: string;
 } | null;
 
 export type GetApiStatsGoodDeals200GoodDealsItemAnalysis = {
-  id: string;
-  listingId: string;
-  searchId: string;
-  userId: string;
-  matchesQuery: boolean;
-  listingType: string | null;
-  score: number | null;
-  verdict: string;
-  marketPriceLow: number | null;
-  marketPriceHigh: number | null;
-  redFlags: string[];
-  reasoning: string;
-  modelUsed: string;
-  providerUsed: string | null;
-  comparables: GetApiStatsGoodDeals200GoodDealsItemAnalysisComparablesItem[] | null;
-  marketMedian: number | null;
-  discount: number | null;
-  imageAnalysis: GetApiStatsGoodDeals200GoodDealsItemAnalysisImageAnalysis;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	listingId: string;
+	searchId: string;
+	userId: string;
+	matchesQuery: boolean;
+	listingType: string | null;
+	score: number | null;
+	verdict: string;
+	marketPriceLow: number | null;
+	marketPriceHigh: number | null;
+	redFlags: string[];
+	reasoning: string;
+	modelUsed: string;
+	providerUsed: string | null;
+	comparables: GetApiStatsGoodDeals200GoodDealsItemAnalysisComparablesItem[] | null;
+	marketMedian: number | null;
+	discount: number | null;
+	imageAnalysis: GetApiStatsGoodDeals200GoodDealsItemAnalysisImageAnalysis;
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type GetApiStatsGoodDeals200GoodDealsItem = {
-  id: string;
-  searchId: string;
-  userId: string;
-  lbcId: string;
-  title: string;
-  price: number;
-  description: string;
-  images: string[];
-  url: string;
-  sellerType: GetApiStatsGoodDeals200GoodDealsItemSellerType;
-  location: string;
-  rawData?: unknown | null;
-  createdAt: string;
-  updatedAt: string;
-  analysis: GetApiStatsGoodDeals200GoodDealsItemAnalysis;
-  searchQuery: string;
+	id: string;
+	searchId: string;
+	userId: string;
+	lbcId: string;
+	title: string;
+	price: number;
+	description: string;
+	images: string[];
+	url: string;
+	sellerType: GetApiStatsGoodDeals200GoodDealsItemSellerType;
+	location: string;
+	rawData?: unknown | null;
+	createdAt: string;
+	updatedAt: string;
+	analysis: GetApiStatsGoodDeals200GoodDealsItemAnalysis;
+	searchQuery: string;
 };
 
 export type GetApiStatsGoodDeals200 = {
-  goodDeals: GetApiStatsGoodDeals200GoodDealsItem[];
+	goodDeals: GetApiStatsGoodDeals200GoodDealsItem[];
 };
 
 export type GetApiSettings200 = {
-  email: string;
-  displayName: string | null;
-  hasApiKey: boolean;
-  maskedApiKey: string | null;
-  aiProvider: string;
-  aiModel: string | null;
-  defaultWebhookUrl: string | null;
-  defaultMinScore: number | null;
-  aiCustomInstructions: string | null;
+	email: string;
+	displayName: string | null;
+	hasApiKey: boolean;
+	maskedApiKey: string | null;
+	aiProvider: string;
+	aiModel: string | null;
+	defaultWebhookUrl: string | null;
+	defaultMinScore: number | null;
+	aiCustomInstructions: string | null;
 };
 
 export type GetApiSettings404 = {
-  error: string;
+	error: string;
 };
 
-export type PatchApiSettingsBodyAiProvider = typeof PatchApiSettingsBodyAiProvider[keyof typeof PatchApiSettingsBodyAiProvider];
-
+export type PatchApiSettingsBodyAiProvider =
+	(typeof PatchApiSettingsBodyAiProvider)[keyof typeof PatchApiSettingsBodyAiProvider];
 
 export const PatchApiSettingsBodyAiProvider = {
-  claude: 'claude',
-  openai: 'openai',
-  gemini: 'gemini',
-  minimax: 'minimax',
+	claude: "claude",
+	openai: "openai",
+	gemini: "gemini",
+	minimax: "minimax",
 } as const;
 
 export type PatchApiSettingsBody = {
-  aiProvider?: PatchApiSettingsBodyAiProvider;
-  aiModel?: string;
-  /**
-     * @minLength 1
-     * @maxLength 500
-     */
-  aiApiKey?: string;
-  /** @minLength 1 */
-  currentPassword?: string;
-  defaultWebhookUrl?: string | null;
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
-  defaultMinScore?: number | null;
-  /** @maxLength 500 */
-  aiCustomInstructions?: string | null;
+	aiProvider?: PatchApiSettingsBodyAiProvider;
+	aiModel?: string;
+	/**
+	 * @minLength 1
+	 * @maxLength 500
+	 */
+	aiApiKey?: string;
+	/** @minLength 1 */
+	currentPassword?: string;
+	defaultWebhookUrl?: string | null;
+	/**
+	 * @minimum 0
+	 * @maximum 100
+	 */
+	defaultMinScore?: number | null;
+	/** @maxLength 500 */
+	aiCustomInstructions?: string | null;
 };
 
 export type PatchApiSettings200 = {
-  success: boolean;
+	success: boolean;
 };
 
 export type PatchApiSettings400 = {
-  error: string | (unknown | null)[];
+	error: string | (unknown | null)[];
 };
 
 export type PatchApiSettings401 = {
-  error: string;
+	error: string;
 };
 
 export type PatchApiSettings404 = {
-  error: string;
+	error: string;
 };
 
 export type PatchApiSettings503 = {
-  error: string;
+	error: string;
 };
 
 export type PatchApiSettingsPasswordBody = {
-  /** @minLength 1 */
-  currentPassword: string;
-  /**
-     * @minLength 8
-     * @pattern [a-zA-Z]
-     */
-  newPassword: string;
+	/** @minLength 1 */
+	currentPassword: string;
+	/**
+	 * @minLength 8
+	 * @pattern [a-zA-Z]
+	 */
+	newPassword: string;
 };
 
 export type PatchApiSettingsPassword200 = {
-  success: boolean;
+	success: boolean;
 };
 
 export type PatchApiSettingsPassword400 = {
-  error: string | (unknown | null)[];
+	error: string | (unknown | null)[];
 };
 
 export type PostApiSettingsWebhookTestBody = {
-  url: string;
+	url: string;
 };
 
 export type PostApiSettingsWebhookTest200 = {
-  success: boolean;
+	success: boolean;
 };
 
 export type PostApiSettingsWebhookTest400 = {
-  error: string;
+	error: string;
 };
 
 export type PostApiSettingsWebhookTest502 = {
-  error: string;
-  details?: string;
+	error: string;
+	details?: string;
 };
 
 export type GetApiAdminDeadLetters200DataItem = {
-  id: string;
-  [key: string]: string;
+	id: string;
+	[key: string]: string;
 };
 
-export type GetApiAdminDeadLetters200Data = {[key: string]: GetApiAdminDeadLetters200DataItem[]};
+export type GetApiAdminDeadLetters200Data = { [key: string]: GetApiAdminDeadLetters200DataItem[] };
 
 export type GetApiAdminDeadLetters200 = {
-  data: GetApiAdminDeadLetters200Data;
+	data: GetApiAdminDeadLetters200Data;
 };
 
 export type GetApiAdminDeadLetters403 = {
-  error: string;
+	error: string;
 };
-

@@ -191,9 +191,7 @@ function LocationAutocomplete({
 					aria-autocomplete="list"
 					aria-haspopup="listbox"
 					aria-controls={`${id}-listbox`}
-					aria-activedescendant={
-						highlightedIndex >= 0 ? `${id}-option-${highlightedIndex}` : undefined
-					}
+					aria-activedescendant={highlightedIndex >= 0 ? `${id}-option-${highlightedIndex}` : undefined}
 					aria-busy={isLoading}
 					value={inputValue}
 					onChange={handleInputChange}
@@ -238,7 +236,6 @@ function LocationAutocomplete({
 				<ul
 					ref={listRef}
 					id={`${id}-listbox`}
-					role="listbox"
 					className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md"
 				>
 					{results.length > 0 &&
@@ -246,7 +243,6 @@ function LocationAutocomplete({
 							<li
 								key={`${loc.city}-${loc.postcode}-${i}`}
 								id={`${id}-option-${i}`}
-								role="option"
 								aria-selected={highlightedIndex === i}
 								className={cn(
 									"flex cursor-pointer items-center gap-2 px-3 min-h-[44px] text-sm transition-colors",
@@ -262,8 +258,7 @@ function LocationAutocomplete({
 							>
 								<MapPinIcon className="size-3.5 shrink-0" />
 								<span>
-									{loc.city}{" "}
-									<span className="text-muted-foreground/70">({loc.postcode})</span>
+									{loc.city} <span className="text-muted-foreground/70">({loc.postcode})</span>
 								</span>
 							</li>
 						))}
@@ -273,9 +268,7 @@ function LocationAutocomplete({
 					{results.length === 0 && !isLoading && !isError && (
 						<li className="px-3 py-2.5 text-sm text-muted-foreground">Aucun résultat</li>
 					)}
-					{isError && (
-						<li className="px-3 py-2.5 text-sm text-destructive">Erreur de recherche</li>
-					)}
+					{isError && <li className="px-3 py-2.5 text-sm text-destructive">Erreur de recherche</li>}
 				</ul>
 			)}
 		</div>

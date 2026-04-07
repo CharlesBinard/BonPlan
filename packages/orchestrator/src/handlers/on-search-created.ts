@@ -1,6 +1,6 @@
 import { AiAuthError, AiQuotaError, AiRateLimitError } from "@bonplan/ai";
-import { buildKeyMap, createLogger, decrypt, publish, Stream, searches, users } from "@bonplan/shared";
 import type { GeocodedLocation } from "@bonplan/shared";
+import { buildKeyMap, createLogger, decrypt, publish, Stream, searches, users } from "@bonplan/shared";
 import type { ProviderType } from "@bonplan/shared/ai-models";
 import { eq } from "drizzle-orm";
 import { mapSearchToKeywords } from "../services/ai-mapper";
@@ -147,8 +147,10 @@ export const handleSearchCreated = async (deps: ConsumerDeps, searchId: string, 
 		search.latitude != null &&
 		search.longitude != null &&
 		!(search.latitude === 0 && search.longitude === 0) &&
-		search.latitude >= 41 && search.latitude <= 52 &&
-		search.longitude >= -5 && search.longitude <= 10
+		search.latitude >= 41 &&
+		search.latitude <= 52 &&
+		search.longitude >= -5 &&
+		search.longitude <= 10
 	) {
 		geocodedLocation = {
 			city: search.location,

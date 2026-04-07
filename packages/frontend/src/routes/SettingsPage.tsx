@@ -14,14 +14,9 @@ import {
 	LockIcon,
 	ShieldCheckIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import {
-	type UpdateSettingsBody,
-	useChangePassword,
-	useSettings,
-	useUpdateSettings,
-} from "@/api";
+import { toast } from "sonner";
+import { type UpdateSettingsBody, useChangePassword, useSettings, useUpdateSettings } from "@/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,9 +33,9 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api, ApiError } from "@/config/api";
+import { Textarea } from "@/components/ui/textarea";
+import { ApiError, api } from "@/config/api";
 import { passwordChangeSchema } from "@/forms/schemas";
 
 // ── Reusable form field wrapper with validation styling ──────────────
@@ -404,9 +399,7 @@ const NotificationsTab = () => {
 		<Card>
 			<CardHeader>
 				<CardTitle>Notifications Webhook</CardTitle>
-				<CardDescription>
-					URL par défaut pour les nouvelles recherches. Compatible Discord webhook.
-				</CardDescription>
+				<CardDescription>URL par défaut pour les nouvelles recherches. Compatible Discord webhook.</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
 				<div className="flex flex-col gap-1.5">

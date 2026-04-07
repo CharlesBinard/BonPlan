@@ -1,16 +1,7 @@
 // packages/notifier/src/notify.ts
 
 import type { Config } from "@bonplan/shared";
-import {
-	analyses,
-	createLogger,
-	listings,
-	notifications,
-	publish,
-	Stream,
-	searches,
-	subscribe,
-} from "@bonplan/shared";
+import { analyses, createLogger, listings, notifications, publish, Stream, searches, subscribe } from "@bonplan/shared";
 import { and, eq, sql } from "drizzle-orm";
 import type Redis from "ioredis";
 import type { WebhookPayload } from "./webhook/webhook";

@@ -1,5 +1,5 @@
-import { createLogger } from "@bonplan/shared";
 import type { GeocodedLocation } from "@bonplan/shared";
+import { createLogger } from "@bonplan/shared";
 
 export type { GeocodedLocation } from "@bonplan/shared";
 

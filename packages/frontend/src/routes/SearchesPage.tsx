@@ -1,3 +1,4 @@
+import type { GeocodedLocation } from "@bonplan/shared/types";
 import {
 	AlertCircleIcon,
 	CheckCircle2Icon,
@@ -9,8 +10,6 @@ import {
 	SlidersHorizontalIcon,
 } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import type { GeocodedLocation } from "@bonplan/shared/types";
-import { LocationAutocomplete } from "@/components/ui/location-autocomplete";
 import { useCreateSearch, useSearches, useSettings } from "@/api";
 import { SearchCard } from "@/components/SearchCard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LocationAutocomplete } from "@/components/ui/location-autocomplete";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -235,11 +235,7 @@ const SearchCreateDialog = () => {
 								valid={selectedLocation !== null}
 								helpText="Ville ou code postal"
 							>
-								<LocationAutocomplete
-									id="location"
-									value={selectedLocation}
-									onChange={setSelectedLocation}
-								/>
+								<LocationAutocomplete id="location" value={selectedLocation} onChange={setSelectedLocation} />
 							</FormField>
 						</div>
 					)}
@@ -329,7 +325,11 @@ const SearchCreateDialog = () => {
 						<FormField
 							label="URL Webhook"
 							htmlFor="webhookUrl"
-							helpText={webhookUrl ? "Discord webhook ou URL custom HTTPS" : "Configurez une URL par défaut dans Paramètres > Notifications, ou saisissez une URL ci-dessous."}
+							helpText={
+								webhookUrl
+									? "Discord webhook ou URL custom HTTPS"
+									: "Configurez une URL par défaut dans Paramètres > Notifications, ou saisissez une URL ci-dessous."
+							}
 						>
 							<Input
 								id="webhookUrl"

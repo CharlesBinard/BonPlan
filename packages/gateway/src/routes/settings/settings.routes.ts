@@ -7,7 +7,12 @@ export const updateSettingsSchema = z
 		aiModel: z.string().optional(),
 		aiApiKey: z.string().trim().min(1).max(500).optional(),
 		currentPassword: z.string().min(1).optional(),
-		defaultWebhookUrl: z.string().url().refine((url) => url.startsWith("https://"), "HTTPS required").optional().nullable(),
+		defaultWebhookUrl: z
+			.string()
+			.url()
+			.refine((url) => url.startsWith("https://"), "HTTPS required")
+			.optional()
+			.nullable(),
 		defaultMinScore: z.number().int().min(0).max(100).optional().nullable(),
 		aiCustomInstructions: z.string().max(500).optional().nullable(),
 	})

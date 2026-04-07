@@ -349,7 +349,7 @@ const SearchDetailPage = () => {
 						<Button
 							onClick={async () => {
 								await update.mutateAsync({
-									id: search!.id,
+									id: search?.id,
 									data: { notifyWebhook: editWebhookUrl || null },
 								});
 								setWebhookDialogOpen(false);
@@ -394,7 +394,7 @@ const SearchDetailPage = () => {
 						<Button
 							onClick={async () => {
 								await update.mutateAsync({
-									id: search!.id,
+									id: search?.id,
 									data: { customInstructions: editInstructions.trim() || null },
 								});
 								setInstructionsDialogOpen(false);

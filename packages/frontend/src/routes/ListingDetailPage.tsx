@@ -155,7 +155,9 @@ const ListingDetailPage = () => {
 						{reasoningExpanded ? <ChevronUpIcon className="size-4" /> : <ChevronDownIcon className="size-4" />}
 						Raisonnement
 					</button>
-					{reasoningExpanded && <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">{analysis.reasoning}</p>}
+					{reasoningExpanded && (
+						<p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">{analysis.reasoning}</p>
+					)}
 				</div>
 			)}
 
