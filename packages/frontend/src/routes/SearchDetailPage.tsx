@@ -4,6 +4,7 @@ import {
 	BarChart3Icon,
 	BellIcon,
 	Loader2Icon,
+	MessageSquareTextIcon,
 	PauseIcon,
 	PlayIcon,
 	SearchIcon,
@@ -28,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { statusColors, statusLabels } from "@/constants/search-status";
@@ -49,6 +51,8 @@ const SearchDetailPage = () => {
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [webhookDialogOpen, setWebhookDialogOpen] = useState(false);
 	const [editWebhookUrl, setEditWebhookUrl] = useState("");
+	const [instructionsDialogOpen, setInstructionsDialogOpen] = useState(false);
+	const [editInstructions, setEditInstructions] = useState("");
 
 	const sort = searchParams.get("sort") ?? "score_desc";
 	const minScore = searchParams.get("minScore") ? Number(searchParams.get("minScore")) : 0;
@@ -81,6 +85,11 @@ const SearchDetailPage = () => {
 	const openWebhookDialog = () => {
 		setEditWebhookUrl(search?.notifyWebhook ?? "");
 		setWebhookDialogOpen(true);
+	};
+
+	const openInstructionsDialog = () => {
+		setEditInstructions(search?.customInstructions ?? "");
+		setInstructionsDialogOpen(true);
 	};
 
 	// Compute summary stats from visible listings
@@ -157,6 +166,20 @@ const SearchDetailPage = () => {
 								{search.notifyWebhook ?? "Aucun webhook configuré"}
 							</span>
 							<Button variant="outline" size="sm" onClick={openWebhookDialog}>
+								Modifier
+							</Button>
+						</div>
+					</div>
+
+					{/* Custom instructions */}
+					<div className="flex flex-col gap-2">
+						<h2 className="text-sm font-medium text-muted-foreground">Instructions IA</h2>
+						<div className="flex items-start gap-2 text-sm">
+							<MessageSquareTextIcon className="size-4 text-muted-foreground mt-0.5" />
+							<span className="text-muted-foreground flex-1">
+								{search.customInstructions || "Aucune instruction spécifique"}
+							</span>
+							<Button variant="outline" size="sm" onClick={openInstructionsDialog}>
 								Modifier
 							</Button>
 						</div>
@@ -330,6 +353,51 @@ const SearchDetailPage = () => {
 									data: { notifyWebhook: editWebhookUrl || null },
 								});
 								setWebhookDialogOpen(false);
+							}}
+							disabled={update.isPending}
+						>
+							{update.isPending && <Loader2Icon className="animate-spin" />}
+							Sauvegarder
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Instructions edit dialog */}
+			<Dialog open={instructionsDialogOpen} onOpenChange={setInstructionsDialogOpen}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle>Instructions pour l'IA</DialogTitle>
+						<DialogDescription>
+							Guidez l'analyse IA pour cette recherche. Ces instructions s'ajoutent à vos instructions globales.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="flex flex-col gap-3">
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="editInstructions">Instructions</Label>
+							<Textarea
+								id="editInstructions"
+								value={editInstructions}
+								onChange={(e) => setEditInstructions(e.target.value)}
+								placeholder="Ex: Je cherche uniquement avec boîte d'origine..."
+								maxLength={500}
+								rows={3}
+							/>
+							<p className="text-[11px] text-muted-foreground flex justify-between">
+								<span>Laissez vide pour supprimer les instructions.</span>
+								<span className="tabular-nums">{editInstructions.length}/500</span>
+							</p>
+						</div>
+					</div>
+					<DialogFooter>
+						<DialogClose render={<Button variant="outline" />}>Annuler</DialogClose>
+						<Button
+							onClick={async () => {
+								await update.mutateAsync({
+									id: search!.id,
+									data: { customInstructions: editInstructions.trim() || null },
+								});
+								setInstructionsDialogOpen(false);
 							}}
 							disabled={update.isPending}
 						>
