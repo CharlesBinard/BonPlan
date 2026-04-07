@@ -32,6 +32,7 @@ settingsRoutes.openapi(getSettingsRoute, async (c) => {
 			aiModel: users.aiModel,
 			defaultWebhookUrl: users.defaultWebhookUrl,
 			defaultMinScore: users.defaultMinScore,
+			aiCustomInstructions: users.aiCustomInstructions,
 		})
 		.from(users)
 		.where(eq(users.id, userId));
@@ -53,16 +54,24 @@ settingsRoutes.openapi(getSettingsRoute, async (c) => {
 		aiModel: user.aiModel ?? null,
 		defaultWebhookUrl: user.defaultWebhookUrl ?? null,
 		defaultMinScore: user.defaultMinScore ?? null,
+		aiCustomInstructions: user.aiCustomInstructions ?? null,
 	});
 });
 
 // @ts-expect-error: openapi handler strict typing vs actual return types
 settingsRoutes.openapi(updateSettingsRoute, async (c) => {
 	const userId = c.get("userId");
-	const { aiProvider, aiModel, aiApiKey, currentPassword, defaultWebhookUrl, defaultMinScore } = c.req.valid("json");
+	const {
+		aiProvider, aiModel, aiApiKey, currentPassword,
+		defaultWebhookUrl, defaultMinScore, aiCustomInstructions,
+	} = c.req.valid("json");
 
 	// No-op guard
-	if (!aiProvider && aiModel === undefined && !aiApiKey && defaultWebhookUrl === undefined && defaultMinScore === undefined) {
+	if (
+		!aiProvider && aiModel === undefined && !aiApiKey
+		&& defaultWebhookUrl === undefined && defaultMinScore === undefined
+		&& aiCustomInstructions === undefined
+	) {
 		return c.json({ success: true });
 	}
 
@@ -140,6 +149,9 @@ settingsRoutes.openapi(updateSettingsRoute, async (c) => {
 	}
 	if (defaultMinScore !== undefined) {
 		updateData.defaultMinScore = defaultMinScore;
+	}
+	if (aiCustomInstructions !== undefined) {
+		updateData.aiCustomInstructions = aiCustomInstructions?.trim() || null;
 	}
 
 	await db.update(users).set(updateData).where(eq(users.id, userId));

@@ -9,6 +9,7 @@ export const updateSettingsSchema = z
 		currentPassword: z.string().min(1).optional(),
 		defaultWebhookUrl: z.string().url().refine((url) => url.startsWith("https://"), "HTTPS required").optional().nullable(),
 		defaultMinScore: z.number().int().min(0).max(100).optional().nullable(),
+		aiCustomInstructions: z.string().max(500).optional().nullable(),
 	})
 	.refine((d) => !d.aiApiKey || d.currentPassword, {
 		message: "Password required to change API key",
@@ -38,6 +39,7 @@ export const getSettingsRoute = createRoute({
 						aiModel: z.string().nullable(),
 						defaultWebhookUrl: z.string().nullable(),
 						defaultMinScore: z.number().int().nullable(),
+						aiCustomInstructions: z.string().nullable(),
 					}),
 				},
 			},
