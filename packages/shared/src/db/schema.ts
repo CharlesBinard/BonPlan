@@ -38,6 +38,7 @@ export const users = pgTable(
 		aiModel: text("ai_model"),
 		defaultWebhookUrl: text("default_webhook_url"),
 		defaultMinScore: integer("default_min_score"),
+		aiCustomInstructions: text("ai_custom_instructions"),
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	},
@@ -46,6 +47,7 @@ export const users = pgTable(
 			"ai_provider_valid",
 			sql`${table.aiProvider} IN (${sql.raw(PROVIDER_VALUES.map((v) => `'${v}'`).join(", "))})`,
 		),
+		check("ai_custom_instructions_length", sql`${table.aiCustomInstructions} IS NULL OR length(${table.aiCustomInstructions}) <= 500`),
 	],
 );
 
@@ -113,6 +115,7 @@ export const searches = pgTable(
 		minScore: integer("min_score").notNull().default(70),
 		allowBundles: boolean("allow_bundles").notNull().default(false),
 		analyzeImages: boolean("analyze_images").notNull().default(false),
+		customInstructions: text("custom_instructions"),
 		lastScrapedAt: timestamp("last_scraped_at", { withTimezone: true }),
 		lastError: text("last_error"),
 		blockedUntil: timestamp("blocked_until", { withTimezone: true }),
@@ -130,6 +133,7 @@ export const searches = pgTable(
 		check("latitude_range", sql`${table.latitude} IS NULL OR ${table.latitude} BETWEEN -90 AND 90`),
 		check("longitude_range", sql`${table.longitude} IS NULL OR ${table.longitude} BETWEEN -180 AND 180`),
 		check("lat_lon_both_or_neither", sql`(${table.latitude} IS NULL) = (${table.longitude} IS NULL)`),
+		check("custom_instructions_length", sql`${table.customInstructions} IS NULL OR length(${table.customInstructions}) <= 500`),
 	],
 );
 
