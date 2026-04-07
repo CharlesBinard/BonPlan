@@ -128,9 +128,6 @@ services:
     command: tunnel run
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?}
-    depends_on:
-      gateway:
-        condition: service_healthy
     restart: unless-stopped
     deploy:
       resources:
@@ -160,8 +157,8 @@ services:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 20s
+      retries: 5
+      start_period: 30s
     deploy:
       resources:
         limits:
