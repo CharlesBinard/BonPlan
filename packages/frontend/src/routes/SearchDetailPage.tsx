@@ -3,6 +3,7 @@ import {
 	ArrowLeftIcon,
 	BarChart3Icon,
 	BellIcon,
+	GitCompareArrows,
 	Loader2Icon,
 	MessageSquareTextIcon,
 	PauseIcon,
@@ -32,6 +33,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { routes } from "@/constants/routes";
 import { statusColors, statusLabels } from "@/constants/search-status";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +55,8 @@ const SearchDetailPage = () => {
 	const [editWebhookUrl, setEditWebhookUrl] = useState("");
 	const [instructionsDialogOpen, setInstructionsDialogOpen] = useState(false);
 	const [editInstructions, setEditInstructions] = useState("");
+	const [selectionMode, setSelectionMode] = useState(false);
+	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
 	const sort = searchParams.get("sort") ?? "score_desc";
 	const minScore = searchParams.get("minScore") ? Number(searchParams.get("minScore")) : 0;
@@ -90,6 +94,25 @@ const SearchDetailPage = () => {
 	const openInstructionsDialog = () => {
 		setEditInstructions(search?.customInstructions ?? "");
 		setInstructionsDialogOpen(true);
+	};
+
+	const toggleSelectionMode = () => {
+		setSelectionMode((prev) => {
+			if (prev) setSelectedIds(new Set());
+			return !prev;
+		});
+	};
+
+	const handleSelect = (id: string) => {
+		setSelectedIds((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) {
+				next.delete(id);
+			} else if (next.size < 4) {
+				next.add(id);
+			}
+			return next;
+		});
 	};
 
 	// Compute summary stats from visible listings
@@ -263,6 +286,14 @@ const SearchDetailPage = () => {
 						{minScore}
 					</Badge>
 				</div>
+				<Button
+					size="sm"
+					variant={selectionMode ? "default" : "outline"}
+					onClick={toggleSelectionMode}
+				>
+					<GitCompareArrows className="size-4" />
+					{selectionMode ? "Annuler" : "Comparer"}
+				</Button>
 			</div>
 
 			{/* Listings grid */}
@@ -286,7 +317,15 @@ const SearchDetailPage = () => {
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 					{allListings.map((listing, index) => (
 						<div key={listing.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
-							<ListingCard listing={listing} analysis={listing.analysis} searchId={id} />
+							<ListingCard
+								listing={listing}
+								analysis={listing.analysis}
+								searchId={id}
+								selectable={selectionMode}
+								selected={selectedIds.has(listing.id)}
+								onSelect={handleSelect}
+								selectDisabled={selectedIds.size >= 4}
+							/>
 						</div>
 					))}
 				</div>
@@ -299,6 +338,27 @@ const SearchDetailPage = () => {
 						{isFetchingNextPage && <Loader2Icon className="animate-spin" />}
 						{isFetchingNextPage ? "Chargement…" : "Charger plus"}
 					</Button>
+				</div>
+			)}
+
+			{/* Compare action bar */}
+			{selectionMode && selectedIds.size >= 2 && (
+				<div className="sticky bottom-0 z-30 flex items-center justify-between gap-4 rounded-t-xl border-t bg-background/95 px-4 py-3 backdrop-blur">
+					<span className="text-sm font-medium">
+						{selectedIds.size} annonce{selectedIds.size > 1 ? "s" : ""} sélectionnée{selectedIds.size > 1 ? "s" : ""}
+					</span>
+					<div className="flex items-center gap-2">
+						<Button variant="outline" size="sm" onClick={toggleSelectionMode}>
+							Annuler
+						</Button>
+						<Button
+							size="sm"
+							onClick={() => navigate(`${routes.searchCompare(id)}?ids=${[...selectedIds].join(",")}`)}
+						>
+							<GitCompareArrows className="size-4" />
+							Comparer
+						</Button>
+					</div>
 				</div>
 			)}
 
