@@ -42,6 +42,7 @@ export const router = createBrowserRouter([
 			// Lazy-loaded pages: each module exports { Component }
 			{ path: "/searches", lazy: () => import("@/routes/SearchesPage") },
 			{ path: "/searches/:id", lazy: () => import("@/routes/SearchDetailPage") },
+			{ path: "/searches/:id/compare", lazy: () => import("@/routes/ComparePage") },
 			{ path: "/searches/:id/listings/:listingId", lazy: () => import("@/routes/ListingDetailPage") },
 			{ path: "/favorites", lazy: () => import("@/routes/FavoritesPage") },
 			{ path: "/feed", lazy: () => import("@/routes/FeedPage") },
