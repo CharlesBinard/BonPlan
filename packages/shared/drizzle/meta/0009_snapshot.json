@@ -1,6 +1,6 @@
 {
-	"id": "eb92b9cb-c9a1-4287-966f-1c583ff653f9",
-	"prevId": "b0c8b566-80ac-4d7b-8991-586b9de78255",
+	"id": "851b5f25-150e-41ae-8cda-b7c2b6ffb1d4",
+	"prevId": "c20acb74-0076-4285-ab36-319d2c82daea",
 	"version": "7",
 	"dialect": "postgresql",
 	"tables": {
@@ -919,6 +919,12 @@
 					"notNull": true,
 					"default": false
 				},
+				"custom_instructions": {
+					"name": "custom_instructions",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
 				"last_scraped_at": {
 					"name": "last_scraped_at",
 					"type": "timestamp with time zone",
@@ -1024,6 +1030,10 @@
 				"lat_lon_both_or_neither": {
 					"name": "lat_lon_both_or_neither",
 					"value": "(\"searches\".\"latitude\" IS NULL) = (\"searches\".\"longitude\" IS NULL)"
+				},
+				"custom_instructions_length": {
+					"name": "custom_instructions_length",
+					"value": "\"searches\".\"custom_instructions\" IS NULL OR length(\"searches\".\"custom_instructions\") <= 500"
 				}
 			},
 			"isRLSEnabled": false
@@ -1176,6 +1186,24 @@
 					"primaryKey": false,
 					"notNull": false
 				},
+				"default_webhook_url": {
+					"name": "default_webhook_url",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"default_min_score": {
+					"name": "default_min_score",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"ai_custom_instructions": {
+					"name": "ai_custom_instructions",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
 				"created_at": {
 					"name": "created_at",
 					"type": "timestamp with time zone",
@@ -1206,6 +1234,10 @@
 				"ai_provider_valid": {
 					"name": "ai_provider_valid",
 					"value": "\"users\".\"ai_provider\" IN ('claude', 'openai', 'gemini', 'minimax')"
+				},
+				"ai_custom_instructions_length": {
+					"name": "ai_custom_instructions_length",
+					"value": "\"users\".\"ai_custom_instructions\" IS NULL OR length(\"users\".\"ai_custom_instructions\") <= 500"
 				}
 			},
 			"isRLSEnabled": false

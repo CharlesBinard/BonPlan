@@ -15,14 +15,10 @@ import {
 } from "@bonplan/shared";
 import { getDefaultModel, type ProviderType } from "@bonplan/shared/ai-models";
 import { and, eq, gte, inArray, isNull } from "drizzle-orm";
-import pLimit from "p-limit";
 import type Redis from "ioredis";
+import pLimit from "p-limit";
 import { z } from "zod";
-import {
-	analyzeListingImages,
-	IMAGE_ANALYSIS_CONCURRENCY,
-	IMAGE_ANALYSIS_SCORE_THRESHOLD,
-} from "./image-analysis";
+import { analyzeListingImages, IMAGE_ANALYSIS_CONCURRENCY, IMAGE_ANALYSIS_SCORE_THRESHOLD } from "./image-analysis";
 import { computeDiscount, fetchMarketContext, type MarketResearchResult } from "./market-research";
 import { buildAnalysisPrompt, buildBatchAnalysisPrompt } from "./prompts";
 import {
@@ -191,6 +187,7 @@ const analyzeSingle = async (
 	userProvider: string,
 	marketResult: MarketResearchResult | null,
 	allowBundles: boolean,
+	customInstructions: string | undefined,
 ): Promise<void> => {
 	const seller = extractSellerInfo(listing);
 	const prompt = buildAnalysisPrompt({
@@ -207,6 +204,7 @@ const analyzeSingle = async (
 		},
 		marketContext: marketResult?.context ?? null,
 		allowBundles,
+		customInstructions,
 	});
 
 	const { data } = await generateStructured({
@@ -251,6 +249,7 @@ const analyzeBatch = async (
 	userProvider: string,
 	marketResult: MarketResearchResult | null,
 	allowBundles: boolean,
+	customInstructions: string | undefined,
 ): Promise<void> => {
 	// Build batch prompt with numbered items
 	const items = listingRows.map((listing, i) => ({
@@ -272,6 +271,7 @@ const analyzeBatch = async (
 		items,
 		marketContext: marketResult?.context ?? null,
 		allowBundles,
+		customInstructions,
 	});
 
 	// Scale maxOutputTokens with batch size (~400 tokens per item)
@@ -315,6 +315,7 @@ const analyzeBatch = async (
 					userProvider,
 					marketResult,
 					allowBundles,
+					customInstructions,
 				);
 			} catch (singleErr) {
 				if (singleErr instanceof AiAuthError || singleErr instanceof AiQuotaError) throw singleErr;
@@ -382,6 +383,7 @@ const analyzeBatch = async (
 					userProvider,
 					marketResult,
 					allowBundles,
+					customInstructions,
 				);
 			} catch (err) {
 				if (err instanceof AiAuthError || err instanceof AiQuotaError) throw err;
@@ -436,6 +438,7 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 					aiApiKeyVersion: users.aiApiKeyVersion,
 					aiProvider: users.aiProvider,
 					aiModel: users.aiModel,
+					aiCustomInstructions: users.aiCustomInstructions,
 				})
 				.from(users)
 				.where(eq(users.id, userId));
@@ -469,6 +472,11 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 
 			const userProvider = (user.aiProvider ?? "claude") as ProviderType;
 			const userModel = user.aiModel ?? getDefaultModel(userProvider);
+
+			const instructionParts: string[] = [];
+			if (user.aiCustomInstructions?.trim()) instructionParts.push(user.aiCustomInstructions.trim());
+			if (search.customInstructions?.trim()) instructionParts.push(search.customInstructions.trim());
+			const customInstructions = instructionParts.length > 0 ? instructionParts.join("\n\n") : undefined;
 
 			// Fetch market context once (cached 24h)
 			const marketResult = await fetchMarketContext(deps.redis, deps.db, searchQuery, deps.config.searxngUrl);
@@ -538,6 +546,7 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 							userProvider,
 							marketResult,
 							search.allowBundles,
+							customInstructions,
 						);
 					} else {
 						// Multiple items — batch prompt
@@ -554,6 +563,7 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 							userProvider,
 							marketResult,
 							search.allowBundles,
+							customInstructions,
 						);
 					}
 				} catch (err) {
@@ -646,10 +656,7 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 
 									if (!result) return;
 
-									const adjustedScore = Math.max(
-										0,
-										Math.min(100, existing.score + result.scoreAdjustment),
-									);
+									const adjustedScore = Math.max(0, Math.min(100, existing.score + result.scoreAdjustment));
 
 									await deps.db
 										.update(analyses)
@@ -657,9 +664,7 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 											score: adjustedScore,
 											imageAnalysis: result,
 										})
-										.where(
-											and(eq(analyses.listingId, listing.id), eq(analyses.searchId, searchId)),
-										);
+										.where(and(eq(analyses.listingId, listing.id), eq(analyses.searchId, searchId)));
 
 									await publish(deps.redis, Stream.ImageAnalysisComplete, {
 										searchId,

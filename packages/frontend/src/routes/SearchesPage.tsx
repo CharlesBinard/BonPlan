@@ -1,3 +1,4 @@
+import type { GeocodedLocation } from "@bonplan/shared/types";
 import {
 	AlertCircleIcon,
 	CheckCircle2Icon,
@@ -9,8 +10,6 @@ import {
 	SlidersHorizontalIcon,
 } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import type { GeocodedLocation } from "@bonplan/shared/types";
-import { LocationAutocomplete } from "@/components/ui/location-autocomplete";
 import { useCreateSearch, useSearches, useSettings } from "@/api";
 import { SearchCard } from "@/components/SearchCard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,9 +18,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LocationAutocomplete } from "@/components/ui/location-autocomplete";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { searchCreateSchema } from "@/forms/schemas";
 
 // ── Reusable form field wrapper ──────────────────────────────────────
@@ -92,6 +93,8 @@ const SearchCreateDialog = () => {
 	const [analyzeImages, setAnalyzeImages] = useState(false);
 	const [enableWebhook, setEnableWebhook] = useState(false);
 	const [webhookUrl, setWebhookUrl] = useState("");
+	const [enableInstructions, setEnableInstructions] = useState(false);
+	const [customInstructions, setCustomInstructions] = useState("");
 	const { data: settings } = useSettings();
 
 	const locationRef = useRef<HTMLDivElement>(null);
@@ -135,6 +138,8 @@ const SearchCreateDialog = () => {
 		setAnalyzeImages(false);
 		setEnableWebhook(!!settings?.defaultWebhookUrl);
 		setWebhookUrl(settings?.defaultWebhookUrl ?? "");
+		setEnableInstructions(false);
+		setCustomInstructions("");
 	};
 
 	const onSubmit = async (e: FormEvent) => {
@@ -151,6 +156,7 @@ const SearchCreateDialog = () => {
 			allowBundles,
 			analyzeImages,
 			notifyWebhook: enableWebhook ? webhookUrl : null,
+			customInstructions: enableInstructions ? customInstructions : null,
 		});
 		if (!result.success) {
 			const errs: Record<string, string> = {};
@@ -229,11 +235,7 @@ const SearchCreateDialog = () => {
 								valid={selectedLocation !== null}
 								helpText="Ville ou code postal"
 							>
-								<LocationAutocomplete
-									id="location"
-									value={selectedLocation}
-									onChange={setSelectedLocation}
-								/>
+								<LocationAutocomplete id="location" value={selectedLocation} onChange={setSelectedLocation} />
 							</FormField>
 						</div>
 					)}
@@ -323,13 +325,45 @@ const SearchCreateDialog = () => {
 						<FormField
 							label="URL Webhook"
 							htmlFor="webhookUrl"
-							helpText={webhookUrl ? "Discord webhook ou URL custom HTTPS" : "Configurez une URL par défaut dans Paramètres > Notifications, ou saisissez une URL ci-dessous."}
+							helpText={
+								webhookUrl
+									? "Discord webhook ou URL custom HTTPS"
+									: "Configurez une URL par défaut dans Paramètres > Notifications, ou saisissez une URL ci-dessous."
+							}
 						>
 							<Input
 								id="webhookUrl"
 								placeholder="https://discord.com/api/webhooks/..."
 								value={webhookUrl}
 								onChange={(e) => setWebhookUrl(e.target.value)}
+							/>
+						</FormField>
+					)}
+
+					<div className="flex items-center gap-3">
+						<Switch
+							id="enableInstructions"
+							checked={enableInstructions}
+							onCheckedChange={(checked) => setEnableInstructions(checked)}
+						/>
+						<Label htmlFor="enableInstructions" className="cursor-pointer">
+							Instructions spécifiques (IA)
+						</Label>
+					</div>
+
+					{enableInstructions && (
+						<FormField
+							label="Instructions pour l'IA"
+							htmlFor="customInstructions"
+							helpText={`${customInstructions.length}/500 — Guidez l'IA pour cette recherche spécifiquement.`}
+						>
+							<Textarea
+								id="customInstructions"
+								value={customInstructions}
+								onChange={(e) => setCustomInstructions(e.target.value)}
+								placeholder="Ex: Je cherche uniquement avec boîte d'origine..."
+								maxLength={500}
+								rows={2}
 							/>
 						</FormField>
 					)}

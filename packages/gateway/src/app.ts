@@ -8,12 +8,12 @@ import { ipRateLimit, userRateLimit } from "./middleware/rate-limit";
 import { securityHeaders } from "./middleware/security-headers";
 import { adminRoutes } from "./routes/admin/admin.handlers";
 import { favoriteRoutes } from "./routes/favorites/favorites.handlers";
+import { geocodeRoutes } from "./routes/geocode/geocode.handlers";
 import { healthRoutes } from "./routes/health/health.routes";
 import { notificationRoutes } from "./routes/notifications/notifications.handlers";
 import { searchRoutes } from "./routes/searches/searches.handlers";
 import { settingsRoutes } from "./routes/settings/settings.handlers";
 import { statsRoutes } from "./routes/stats/stats.handlers";
-import { geocodeRoutes } from "./routes/geocode/geocode.handlers";
 
 const logger = createLogger("gateway");
 

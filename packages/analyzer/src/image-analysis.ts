@@ -1,5 +1,5 @@
 import { generateStructuredWithImages } from "@bonplan/ai";
-import { createLogger, listings } from "@bonplan/shared";
+import { createLogger, type listings } from "@bonplan/shared";
 import type { ProviderType } from "@bonplan/shared/ai-models";
 import { z } from "zod";
 import { buildImageAnalysisPrompt } from "./prompts";

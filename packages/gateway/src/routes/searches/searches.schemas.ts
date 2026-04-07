@@ -19,6 +19,7 @@ export const createSearchSchema = z
 		minScore: z.number().int().min(0).max(100).default(70),
 		allowBundles: z.boolean().default(false),
 		analyzeImages: z.boolean().default(false),
+		customInstructions: z.string().max(500).optional().nullable(),
 	})
 	.refine((data) => (data.latitude == null) === (data.longitude == null), {
 		message: "latitude and longitude must both be provided or both be null",
@@ -35,6 +36,7 @@ export const updateSearchSchema = z.object({
 		.nullable(),
 	minScore: z.number().int().min(0).max(100).optional(),
 	status: z.enum(["active", "paused"]).optional(),
+	customInstructions: z.string().max(500).optional().nullable(),
 });
 
 export const listingsQuerySchema = paginationSchema.extend({

@@ -29,7 +29,13 @@ export const PROVIDER_LABELS: Record<ProviderType, string> = {
 export const AI_MODELS: Record<ProviderType, ModelOption[]> = {
 	[ProviderType.Claude]: [
 		{ id: "claude-haiku-4-5", label: "Claude Haiku 4.5", tier: AiModelTier.Fast, supportsVision: true },
-		{ id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", tier: AiModelTier.Balanced, recommended: true, supportsVision: true },
+		{
+			id: "claude-sonnet-4-6",
+			label: "Claude Sonnet 4.6",
+			tier: AiModelTier.Balanced,
+			recommended: true,
+			supportsVision: true,
+		},
 		{ id: "claude-opus-4-6", label: "Claude Opus 4.6", tier: AiModelTier.Premium, supportsVision: true },
 	],
 	[ProviderType.OpenAI]: [
@@ -39,7 +45,13 @@ export const AI_MODELS: Record<ProviderType, ModelOption[]> = {
 	],
 	[ProviderType.Gemini]: [
 		{ id: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite", tier: AiModelTier.Fast, supportsVision: true },
-		{ id: "gemini-3-flash", label: "Gemini 3 Flash", tier: AiModelTier.Balanced, recommended: true, supportsVision: true },
+		{
+			id: "gemini-3-flash",
+			label: "Gemini 3 Flash",
+			tier: AiModelTier.Balanced,
+			recommended: true,
+			supportsVision: true,
+		},
 		{ id: "gemini-3.1-pro", label: "Gemini 3.1 Pro", tier: AiModelTier.Premium, supportsVision: true },
 	],
 	[ProviderType.Minimax]: [

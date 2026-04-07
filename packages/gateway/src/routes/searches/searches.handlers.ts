@@ -73,6 +73,7 @@ searchRoutes.openapi(createSearchRoute, async (c) => {
 			minScore: body.minScore,
 			allowBundles: body.allowBundles,
 			analyzeImages: body.analyzeImages,
+			customInstructions: body.customInstructions?.trim() || null,
 		})
 		.returning();
 
@@ -133,6 +134,10 @@ searchRoutes.openapi(updateSearchRoute, async (c) => {
 
 	if (existing.length === 0) {
 		return c.json({ error: "Search not found" }, 404);
+	}
+
+	if (body.customInstructions !== undefined) {
+		body.customInstructions = body.customInstructions?.trim() || null;
 	}
 
 	const changes = Object.keys(body).filter((k) => body[k as keyof typeof body] !== undefined);

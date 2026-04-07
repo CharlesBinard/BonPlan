@@ -155,7 +155,9 @@ const ListingDetailPage = () => {
 						{reasoningExpanded ? <ChevronUpIcon className="size-4" /> : <ChevronDownIcon className="size-4" />}
 						Raisonnement
 					</button>
-					{reasoningExpanded && <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">{analysis.reasoning}</p>}
+					{reasoningExpanded && (
+						<p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">{analysis.reasoning}</p>
+					)}
 				</div>
 			)}
 
@@ -237,8 +239,8 @@ const ListingDetailPage = () => {
 					<p className="text-sm text-muted-foreground">{analysis.imageAnalysis.condition}</p>
 					{analysis.imageAnalysis.findings.length > 0 && (
 						<ul className="space-y-1">
-							{analysis.imageAnalysis.findings.map((finding: string, i: number) => (
-								<li key={i} className="text-sm flex items-start gap-1.5">
+							{analysis.imageAnalysis.findings.map((finding: string) => (
+								<li key={finding} className="text-sm flex items-start gap-1.5">
 									<span className="text-muted-foreground mt-0.5">•</span>
 									<span>{finding}</span>
 								</li>

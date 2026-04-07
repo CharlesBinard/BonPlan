@@ -14,14 +14,9 @@ import {
 	LockIcon,
 	ShieldCheckIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import {
-	type UpdateSettingsBody,
-	useChangePassword,
-	useSettings,
-	useUpdateSettings,
-} from "@/api";
+import { toast } from "sonner";
+import { type UpdateSettingsBody, useChangePassword, useSettings, useUpdateSettings } from "@/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,7 +34,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api, ApiError } from "@/config/api";
+import { Textarea } from "@/components/ui/textarea";
+import { ApiError, api } from "@/config/api";
 import { passwordChangeSchema } from "@/forms/schemas";
 
 // ── Reusable form field wrapper with validation styling ──────────────
@@ -141,12 +137,14 @@ const AiConfigTab = () => {
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [editingKey, setEditingKey] = useState(false);
+	const [customInstructions, setCustomInstructions] = useState("");
 
 	const initializedRef = useRef(false);
 	useEffect(() => {
 		if (settings && !initializedRef.current) {
 			setSelectedProvider(settings.aiProvider);
 			setSelectedModel(settings.aiModel ?? getDefaultModel(settings.aiProvider as ProviderType));
+			setCustomInstructions(settings.aiCustomInstructions ?? "");
 			initializedRef.current = true;
 		}
 	}, [settings]);
@@ -184,6 +182,11 @@ const AiConfigTab = () => {
 			body.aiApiKey = apiKey;
 			body.currentPassword = password;
 		}
+		const trimmedInstructions = customInstructions.trim();
+		const savedInstructions = settings.aiCustomInstructions ?? "";
+		if (trimmedInstructions !== savedInstructions) {
+			body.aiCustomInstructions = trimmedInstructions || null;
+		}
 		if (Object.keys(body).length === 0) return;
 		try {
 			await updateSettings.mutateAsync({ data: body });
@@ -200,7 +203,11 @@ const AiConfigTab = () => {
 		}
 	};
 
-	const hasChanges = selectedProvider !== savedProvider || selectedModel !== settings.aiModel || apiKey.length > 0;
+	const hasChanges =
+		selectedProvider !== savedProvider ||
+		selectedModel !== settings.aiModel ||
+		apiKey.length > 0 ||
+		customInstructions.trim() !== (settings.aiCustomInstructions ?? "");
 
 	return (
 		<Card>
@@ -316,6 +323,23 @@ const AiConfigTab = () => {
 					</FormField>
 				)}
 
+				{/* Custom instructions */}
+				<div className="flex flex-col gap-1.5">
+					<Label htmlFor="customInstructions">Instructions personnalisées pour l'IA</Label>
+					<Textarea
+						id="customInstructions"
+						value={customInstructions}
+						onChange={(e) => setCustomInstructions(e.target.value)}
+						placeholder="Ex: Je suis bricoleur, les petits défauts cosmétiques ne me dérangent pas..."
+						maxLength={500}
+						rows={3}
+					/>
+					<p className="text-[11px] text-muted-foreground flex justify-between">
+						<span>Ces instructions guident l'IA pour toutes vos recherches.</span>
+						<span className="tabular-nums">{customInstructions.length}/500</span>
+					</p>
+				</div>
+
 				{error && (
 					<Alert variant="destructive">
 						<AlertCircleIcon className="size-4" />
@@ -375,9 +399,7 @@ const NotificationsTab = () => {
 		<Card>
 			<CardHeader>
 				<CardTitle>Notifications Webhook</CardTitle>
-				<CardDescription>
-					URL par défaut pour les nouvelles recherches. Compatible Discord webhook.
-				</CardDescription>
+				<CardDescription>URL par défaut pour les nouvelles recherches. Compatible Discord webhook.</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
 				<div className="flex flex-col gap-1.5">

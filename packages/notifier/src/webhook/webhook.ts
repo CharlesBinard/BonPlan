@@ -31,9 +31,7 @@ export const sendWebhook = async (
 	}
 
 	try {
-		const body = isDiscordWebhookUrl(webhookUrl)
-			? buildDiscordWebhookPayload(payload)
-			: payload;
+		const body = isDiscordWebhookUrl(webhookUrl) ? buildDiscordWebhookPayload(payload) : payload;
 
 		const response = await fetch(webhookUrl, {
 			method: "POST",

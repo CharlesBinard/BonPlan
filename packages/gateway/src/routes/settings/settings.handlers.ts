@@ -1,19 +1,14 @@
 import { createLogger, encrypt, users } from "@bonplan/shared";
 import { isValidModel, type ProviderType } from "@bonplan/shared/ai-models";
-import { validateWebhookUrl, validateWebhookIp } from "@bonplan/shared/ssrf";
-import { isDiscordWebhookUrl, buildDiscordWebhookPayload } from "@bonplan/shared/discord-embed";
 import type { WebhookPayload } from "@bonplan/shared/discord-embed";
+import { buildDiscordWebhookPayload, isDiscordWebhookUrl } from "@bonplan/shared/discord-embed";
+import { validateWebhookIp, validateWebhookUrl } from "@bonplan/shared/ssrf";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 import { auth } from "../../lib/auth";
 import { config, db } from "../../lib/db";
 import type { AuthEnv } from "../../middleware/auth";
-import {
-	changePasswordRoute,
-	getSettingsRoute,
-	updateSettingsRoute,
-	webhookTestRoute,
-} from "./settings.routes";
+import { changePasswordRoute, getSettingsRoute, updateSettingsRoute, webhookTestRoute } from "./settings.routes";
 
 const logger = createLogger("gateway");
 
@@ -32,6 +27,7 @@ settingsRoutes.openapi(getSettingsRoute, async (c) => {
 			aiModel: users.aiModel,
 			defaultWebhookUrl: users.defaultWebhookUrl,
 			defaultMinScore: users.defaultMinScore,
+			aiCustomInstructions: users.aiCustomInstructions,
 		})
 		.from(users)
 		.where(eq(users.id, userId));
@@ -53,16 +49,25 @@ settingsRoutes.openapi(getSettingsRoute, async (c) => {
 		aiModel: user.aiModel ?? null,
 		defaultWebhookUrl: user.defaultWebhookUrl ?? null,
 		defaultMinScore: user.defaultMinScore ?? null,
+		aiCustomInstructions: user.aiCustomInstructions ?? null,
 	});
 });
 
 // @ts-expect-error: openapi handler strict typing vs actual return types
 settingsRoutes.openapi(updateSettingsRoute, async (c) => {
 	const userId = c.get("userId");
-	const { aiProvider, aiModel, aiApiKey, currentPassword, defaultWebhookUrl, defaultMinScore } = c.req.valid("json");
+	const { aiProvider, aiModel, aiApiKey, currentPassword, defaultWebhookUrl, defaultMinScore, aiCustomInstructions } =
+		c.req.valid("json");
 
 	// No-op guard
-	if (!aiProvider && aiModel === undefined && !aiApiKey && defaultWebhookUrl === undefined && defaultMinScore === undefined) {
+	if (
+		!aiProvider &&
+		aiModel === undefined &&
+		!aiApiKey &&
+		defaultWebhookUrl === undefined &&
+		defaultMinScore === undefined &&
+		aiCustomInstructions === undefined
+	) {
 		return c.json({ success: true });
 	}
 
@@ -141,6 +146,9 @@ settingsRoutes.openapi(updateSettingsRoute, async (c) => {
 	if (defaultMinScore !== undefined) {
 		updateData.defaultMinScore = defaultMinScore;
 	}
+	if (aiCustomInstructions !== undefined) {
+		updateData.aiCustomInstructions = aiCustomInstructions?.trim() || null;
+	}
 
 	await db.update(users).set(updateData).where(eq(users.id, userId));
 
@@ -199,9 +207,7 @@ settingsRoutes.openapi(webhookTestRoute, async (c) => {
 		redFlags: [],
 	};
 
-	const body = isDiscordWebhookUrl(url)
-		? buildDiscordWebhookPayload(testPayload)
-		: testPayload;
+	const body = isDiscordWebhookUrl(url) ? buildDiscordWebhookPayload(testPayload) : testPayload;
 
 	try {
 		const res = await fetch(url, {
@@ -218,9 +224,12 @@ settingsRoutes.openapi(webhookTestRoute, async (c) => {
 
 		return c.json({ success: true }, 200);
 	} catch (err) {
-		return c.json({
-			error: "Webhook injoignable",
-			details: err instanceof Error ? err.message : String(err),
-		}, 502);
+		return c.json(
+			{
+				error: "Webhook injoignable",
+				details: err instanceof Error ? err.message : String(err),
+			},
+			502,
+		);
 	}
 });
