@@ -305,7 +305,10 @@ Add to the lucide-react import:
 
 ```typescript
 GitCompareArrows,
+Loader2Icon,
 ```
+
+Note: `Loader2Icon` is needed for the "Charger plus" spinner in the Sheet.
 
 Add new imports:
 
@@ -324,7 +327,7 @@ import {
 
 - [ ] **Step 2: Add state**
 
-In the component, after the existing state (line 52), add:
+In the component, after the existing state declarations (around line 30, `const [currentImage, setCurrentImage] = useState(0)`) and **BEFORE any early returns** (the `if (isLoading)` at line 41), add:
 
 ```typescript
 const [compareSheetOpen, setCompareSheetOpen] = useState(false);
@@ -333,7 +336,7 @@ const [compareIds, setCompareIds] = useState<Set<string>>(new Set());
 
 - [ ] **Step 3: Fetch other listings for the picker**
 
-After the existing hooks (line 67), add:
+After the state declarations from Step 2 and **BEFORE the early returns** (before `if (isLoading)`), add:
 
 ```typescript
 const {
@@ -341,7 +344,7 @@ const {
 	fetchNextPage: fetchMoreListings,
 	hasNextPage: hasMoreListings,
 	isFetchingNextPage: isFetchingMoreListings,
-} = useListings(id, { sort: "score_desc" });
+} = useListings(searchId, { sort: "score_desc" });
 
 const otherListings = (listingsData?.pages.flatMap((p) => p.listings) ?? []).filter(
 	(l) => l.id !== listingId,
@@ -352,7 +355,7 @@ Note: Using `sort: "score_desc"` ensures the list endpoint joins analysis data (
 
 - [ ] **Step 4: Add compare selection handler**
 
-After the `openInstructionsDialog` function, add:
+After the `useListings` call from Step 3 (still before early returns), add:
 
 ```typescript
 const handleCompareSelect = (lid: string) => {
@@ -484,7 +487,7 @@ After the instructions edit dialog (at the end of the component JSX, before the 
 				disabled={compareIds.size === 0}
 				onClick={() => {
 					const ids = [listingId, ...compareIds].join(",");
-					navigate(`${routes.searchCompare(id)}?ids=${ids}`);
+					navigate(`${routes.searchCompare(searchId)}?ids=${ids}`);
 				}}
 			>
 				<GitCompareArrows className="size-4" />
@@ -517,12 +520,19 @@ git commit -m "feat(frontend): add compare picker sheet to listing detail page"
 
 - [ ] **Step 1: Create the ComparePage component**
 
-Create `packages/frontend/src/routes/ComparePage.tsx`:
+Create `packages/frontend/src/routes/ComparePage.tsx`.
+
+**IMPORTANT layout note:** Use a `<table>` element (not flex columns) so that row heights synchronize across all listing columns automatically. Variable-height content (verdict, red flags) would misalign with independent flex columns.
+
+**IMPORTANT navigation note:** Use `navigate()` from react-router-dom for internal links (not `window.location.href` which causes full page reloads).
+
+**IMPORTANT partial error note:** If some listings return 404, filter them out. Show a toast for missing ones. If < 2 valid remain, redirect.
 
 ```tsx
 import { AlertTriangleIcon, ArrowLeftIcon, ExternalLinkIcon, Loader2Icon, XIcon } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { useListing } from "@/api";
 import { ScoreBar } from "@/components/ScoreBar";
 import { Badge } from "@/components/ui/badge";
@@ -543,155 +553,26 @@ const sellerLabels: Record<string, string> = {
 	pro: "Pro",
 };
 
-type CompareColumnProps = {
-	searchId: string;
-	listingId: string;
-	onRemove: (id: string) => void;
-	isBestPrice: boolean;
-	isBestScore: boolean;
-	hasFewestFlags: boolean;
-};
-
-const CompareColumn = ({ searchId, listingId, onRemove, isBestPrice, isBestScore, hasFewestFlags }: CompareColumnProps) => {
-	const { data, isLoading, isError } = useListing(searchId, listingId);
-
-	if (isLoading) {
-		return (
-			<div className="flex flex-col gap-3 min-w-[200px]">
-				<Skeleton className="h-24 w-full rounded-lg" />
-				{Array.from({ length: 7 }).map((_, i) => (
-					<Skeleton key={`skel-${listingId}-${i}`} className="h-8 w-full" />
-				))}
-			</div>
-		);
-	}
-
-	if (isError || !data) return null;
-
-	const { listing, analysis } = data;
-	const thumbnail = listing.images[0];
-	const score = analysis?.score ?? null;
-	const redFlags = analysis?.redFlags ?? [];
-
-	return (
-		<div className="flex flex-col gap-0 min-w-[200px]">
-			{/* Header */}
-			<div className="flex flex-col gap-2 border-b border-border pb-3 mb-1">
-				{thumbnail ? (
-					<img src={thumbnail} alt={listing.title} className="h-24 w-full rounded-lg object-cover" />
-				) : (
-					<div className="h-24 w-full rounded-lg bg-muted" />
-				)}
-				<a
-					href={routes.listingDetail(searchId, listingId)}
-					className="text-sm font-medium hover:underline line-clamp-2"
-					onClick={(e) => { e.preventDefault(); window.location.href = routes.listingDetail(searchId, listingId); }}
-				>
-					{listing.title}
-				</a>
-				<div className="flex items-center gap-1">
-					<a href={listing.url} target="_blank" rel="noopener noreferrer" title="Voir sur Leboncoin">
-						<Button variant="ghost" size="icon-sm">
-							<ExternalLinkIcon className="size-3.5" />
-						</Button>
-					</a>
-					<Button variant="ghost" size="icon-sm" onClick={() => onRemove(listingId)} title="Retirer">
-						<XIcon className="size-3.5" />
-					</Button>
-				</div>
-			</div>
-
-			{/* Prix */}
-			<div className="border-b border-border py-2.5">
-				<span className={cn("text-sm font-bold", isBestPrice && "text-emerald-500")}>
-					{formatPrice(listing.price)}
-					{isBestPrice && " ★"}
-				</span>
-			</div>
-
-			{/* Score */}
-			<div className="border-b border-border py-2.5">
-				<div className={cn(isBestScore && "[&_span]:text-emerald-500")}>
-					<ScoreBar score={score} />
-					{isBestScore && score !== null && (
-						<span className="text-xs font-bold text-emerald-500"> ★</span>
-					)}
-				</div>
-			</div>
-
-			{/* Verdict */}
-			<div className="border-b border-border py-2.5">
-				{analysis?.verdict ? (
-					<p className="text-xs text-muted-foreground whitespace-pre-line line-clamp-4">
-						{analysis.verdict}
-					</p>
-				) : (
-					<span className="text-xs text-muted-foreground italic">—</span>
-				)}
-			</div>
-
-			{/* Prix marché */}
-			<div className="border-b border-border py-2.5">
-				{analysis?.marketPriceLow != null && analysis?.marketPriceHigh != null ? (
-					<span className="text-xs text-muted-foreground">
-						{formatPrice(analysis.marketPriceLow)} – {formatPrice(analysis.marketPriceHigh)}
-					</span>
-				) : (
-					<span className="text-xs text-muted-foreground italic">—</span>
-				)}
-			</div>
-
-			{/* Red flags */}
-			<div className="border-b border-border py-2.5">
-				{redFlags.length === 0 ? (
-					<span className={cn("text-xs", hasFewestFlags ? "text-emerald-500 font-medium" : "text-muted-foreground")}>
-						Aucun
-					</span>
-				) : (
-					<div className="flex flex-wrap gap-1">
-						{redFlags.map((flag) => (
-							<Badge key={flag} variant="destructive" className="text-[10px]">
-								{flag}
-							</Badge>
-						))}
-					</div>
-				)}
-			</div>
-
-			{/* Vendeur */}
-			<div className="border-b border-border py-2.5">
-				<span className="text-xs text-muted-foreground">
-					{sellerLabels[listing.sellerType] ?? listing.sellerType}
-				</span>
-			</div>
-
-			{/* Localisation */}
-			<div className="py-2.5">
-				<span className="text-xs text-muted-foreground">{listing.location}</span>
-			</div>
-		</div>
-	);
-};
-
 const ComparePage = () => {
 	const { id: searchId = "" } = useParams<{ id: string }>();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const navigate = useNavigate();
 
+	// Parse and validate IDs from URL
 	const ids = useMemo(() => {
 		const raw = searchParams.get("ids") ?? "";
 		return [...new Set(raw.split(",").map((s) => s.trim()).filter(Boolean))].slice(0, 4);
 	}, [searchParams]);
 
+	// Redirect if < 2 IDs
 	useEffect(() => {
 		if (ids.length < 2) {
 			navigate(routes.searchDetail(searchId), { replace: true });
 		}
 	}, [ids.length, searchId, navigate]);
 
-	// Fetch all listings in parallel (each useListing call is a separate hook, but we use
-	// the CompareColumn component which calls useListing internally)
-	// We need the data here for delta computation, so we also call useListing at this level
+	// Fetch all listings in parallel (hooks always called unconditionally;
+	// Orval's generated enabled guard prevents API calls when listingId is "")
 	const q1 = useListing(searchId, ids[0] ?? "");
 	const q2 = useListing(searchId, ids[1] ?? "");
 	const q3 = useListing(searchId, ids[2] ?? "");
@@ -700,6 +581,21 @@ const ComparePage = () => {
 	const queries = [q1, q2, q3, q4].slice(0, ids.length);
 	const allLoaded = queries.every((q) => !q.isLoading);
 	const allErrored = queries.every((q) => q.isError);
+
+	// Handle partial errors: filter out 404s, toast, redirect if < 2 valid
+	useEffect(() => {
+		if (!allLoaded) return;
+		const errorCount = queries.filter((q) => q.isError).length;
+		if (errorCount > 0 && !allErrored) {
+			toast.error(`${errorCount} annonce(s) introuvable(s)`);
+			const validIds = ids.filter((_, i) => !queries[i]?.isError);
+			if (validIds.length < 2) {
+				navigate(routes.searchDetail(searchId), { replace: true });
+			} else if (validIds.length < ids.length) {
+				setSearchParams({ ids: validIds.join(",") }, { replace: true });
+			}
+		}
+	}, [allLoaded]);
 
 	const handleRemove = (listingId: string) => {
 		const next = ids.filter((i) => i !== listingId);
@@ -710,7 +606,7 @@ const ComparePage = () => {
 		}
 	};
 
-	// Compute deltas
+	// Compute deltas from loaded data
 	const prices = queries.map((q) => q.data?.listing.price ?? null);
 	const scores = queries.map((q) => q.data?.analysis?.score ?? null);
 	const flagCounts = queries.map((q) => q.data?.analysis?.redFlags?.length ?? null);
@@ -719,8 +615,8 @@ const ComparePage = () => {
 	const validScores = scores.filter((s): s is number => s !== null);
 	const validFlagCounts = flagCounts.filter((f): f is number => f !== null);
 
-	const bestPrice = validPrices.length > 0 ? Math.min(...validPrices) : null;
-	const bestScore = validScores.length > 0 ? Math.max(...validScores) : null;
+	const bestPrice = validPrices.length > 1 ? Math.min(...validPrices) : null;
+	const bestScore = validScores.length > 1 ? Math.max(...validScores) : null;
 	const fewestFlags = validFlagCounts.length > 0 ? Math.min(...validFlagCounts) : null;
 
 	if (ids.length < 2) return null;
@@ -737,7 +633,25 @@ const ComparePage = () => {
 		);
 	}
 
-	const rowLabels = ["Prix", "Score", "Verdict", "Prix marché", "Red flags", "Vendeur", "Localisation"];
+	// Loading skeleton
+	if (!allLoaded) {
+		return (
+			<div className="flex flex-col gap-6 animate-fade-in">
+				<Skeleton className="h-8 w-48" />
+				<Skeleton className="h-6 w-64" />
+				<div className="grid gap-4" style={{ gridTemplateColumns: `8rem repeat(${ids.length}, 1fr)` }}>
+					{Array.from({ length: (ids.length + 1) * 8 }).map((_, i) => (
+						<Skeleton key={`sk-${i}`} className="h-10 w-full" />
+					))}
+				</div>
+			</div>
+		);
+	}
+
+	// Build data array for the table
+	const listings = queries
+		.map((q, i) => (q.data ? { id: ids[i] ?? "", ...q.data } : null))
+		.filter((d): d is NonNullable<typeof d> => d !== null);
 
 	return (
 		<div className="flex flex-col gap-6 animate-fade-in">
@@ -752,40 +666,172 @@ const ComparePage = () => {
 			</Button>
 
 			<h1 className="text-xl font-semibold">
-				Comparaison ({ids.length} annonces)
+				Comparaison ({listings.length} annonces)
 			</h1>
 
+			{/* Table layout — rows are synchronized across all columns */}
 			<div className="overflow-x-auto">
-				<div className="flex gap-0 min-w-fit">
-					{/* Label column */}
-					<div className="sticky left-0 z-10 flex flex-col gap-0 w-32 shrink-0 bg-background shadow-[2px_0_8px_rgba(0,0,0,0.1)]">
-						{/* Header spacer */}
-						<div className="border-b border-border pb-3 mb-1">
-							<div className="h-24" />
-							<div className="h-5" />
-							<div className="h-8" />
-						</div>
-						{rowLabels.map((label) => (
-							<div key={label} className="border-b border-border py-2.5 last:border-b-0">
-								<span className="text-xs font-medium text-muted-foreground">{label}</span>
-							</div>
-						))}
-					</div>
-
-					{/* Listing columns */}
-					{ids.map((listingId, i) => (
-						<div key={listingId} className="flex-1 px-3">
-							<CompareColumn
-								searchId={searchId}
-								listingId={listingId}
-								onRemove={handleRemove}
-								isBestPrice={allLoaded && prices[i] === bestPrice && validPrices.length > 1}
-								isBestScore={allLoaded && scores[i] === bestScore && validScores.length > 1}
-								hasFewestFlags={allLoaded && flagCounts[i] === fewestFlags && fewestFlags === 0}
-							/>
-						</div>
-					))}
-				</div>
+				<table className="w-full border-collapse">
+					{/* Header row: thumbnails + titles + actions */}
+					<thead>
+						<tr>
+							<th className="sticky left-0 z-10 w-32 bg-background shadow-[2px_0_8px_rgba(0,0,0,0.1)]" />
+							{listings.map((item) => (
+								<th key={item.id} className="min-w-[200px] px-3 pb-3 align-top text-left font-normal">
+									{item.listing.images[0] ? (
+										<img
+											src={item.listing.images[0]}
+											alt={item.listing.title}
+											className="h-24 w-full rounded-lg object-cover mb-2"
+										/>
+									) : (
+										<div className="h-24 w-full rounded-lg bg-muted mb-2" />
+									)}
+									<button
+										type="button"
+										onClick={() => navigate(routes.listingDetail(searchId, item.id))}
+										className="text-sm font-medium hover:underline line-clamp-2 text-left"
+									>
+										{item.listing.title}
+									</button>
+									<div className="flex items-center gap-1 mt-1">
+										<a href={item.listing.url} target="_blank" rel="noopener noreferrer" title="Voir sur Leboncoin">
+											<Button variant="ghost" size="icon-sm">
+												<ExternalLinkIcon className="size-3.5" />
+											</Button>
+										</a>
+										<Button variant="ghost" size="icon-sm" onClick={() => handleRemove(item.id)} title="Retirer">
+											<XIcon className="size-3.5" />
+										</Button>
+									</div>
+								</th>
+							))}
+						</tr>
+					</thead>
+					<tbody>
+						{/* Prix */}
+						<tr className="border-t border-border">
+							<td className="sticky left-0 z-10 bg-background py-2.5 pr-3 shadow-[2px_0_8px_rgba(0,0,0,0.1)]">
+								<span className="text-xs font-medium text-muted-foreground">Prix</span>
+							</td>
+							{listings.map((item, i) => (
+								<td key={item.id} className="px-3 py-2.5">
+									<span className={cn("text-sm font-bold", prices[i] === bestPrice && bestPrice !== null && "text-emerald-500")}>
+										{formatPrice(item.listing.price)}
+										{prices[i] === bestPrice && bestPrice !== null && " ★"}
+									</span>
+								</td>
+							))}
+						</tr>
+						{/* Score */}
+						<tr className="border-t border-border">
+							<td className="sticky left-0 z-10 bg-background py-2.5 pr-3 shadow-[2px_0_8px_rgba(0,0,0,0.1)]">
+								<span className="text-xs font-medium text-muted-foreground">Score</span>
+							</td>
+							{listings.map((item, i) => {
+								const score = item.analysis?.score ?? null;
+								const isBest = scores[i] === bestScore && bestScore !== null;
+								return (
+									<td key={item.id} className="px-3 py-2.5">
+										<ScoreBar score={score} />
+										{isBest && score !== null && (
+											<span className="text-xs font-bold text-emerald-500"> ★</span>
+										)}
+									</td>
+								);
+							})}
+						</tr>
+						{/* Verdict */}
+						<tr className="border-t border-border">
+							<td className="sticky left-0 z-10 bg-background py-2.5 pr-3 shadow-[2px_0_8px_rgba(0,0,0,0.1)]">
+								<span className="text-xs font-medium text-muted-foreground">Verdict</span>
+							</td>
+							{listings.map((item) => (
+								<td key={item.id} className="px-3 py-2.5">
+									{item.analysis?.verdict ? (
+										<p className="text-xs text-muted-foreground whitespace-pre-line">
+											{item.analysis.verdict}
+										</p>
+									) : (
+										<span className="text-xs text-muted-foreground italic">—</span>
+									)}
+								</td>
+							))}
+						</tr>
+						{/* Prix marché */}
+						<tr className="border-t border-border">
+							<td className="sticky left-0 z-10 bg-background py-2.5 pr-3 shadow-[2px_0_8px_rgba(0,0,0,0.1)]">
+								<span className="text-xs font-medium text-muted-foreground">Prix marché</span>
+							</td>
+							{listings.map((item) => (
+								<td key={item.id} className="px-3 py-2.5">
+									{item.analysis?.marketPriceLow != null && item.analysis?.marketPriceHigh != null ? (
+										<span className="text-xs text-muted-foreground">
+											{formatPrice(item.analysis.marketPriceLow)} – {formatPrice(item.analysis.marketPriceHigh)}
+										</span>
+									) : (
+										<span className="text-xs text-muted-foreground italic">—</span>
+									)}
+								</td>
+							))}
+						</tr>
+						{/* Red flags */}
+						<tr className="border-t border-border">
+							<td className="sticky left-0 z-10 bg-background py-2.5 pr-3 shadow-[2px_0_8px_rgba(0,0,0,0.1)]">
+								<span className="text-xs font-medium text-muted-foreground">Red flags</span>
+							</td>
+							{listings.map((item, i) => {
+								const flags = item.analysis?.redFlags ?? [];
+								return (
+									<td key={item.id} className="px-3 py-2.5">
+										{flags.length === 0 ? (
+											<span className={cn(
+												"text-xs",
+												flagCounts[i] === fewestFlags && fewestFlags === 0
+													? "text-emerald-500 font-medium"
+													: "text-muted-foreground",
+											)}>
+												Aucun
+											</span>
+										) : (
+											<div className="flex flex-wrap gap-1">
+												{flags.map((flag) => (
+													<Badge key={flag} variant="destructive" className="text-[10px]">
+														{flag}
+													</Badge>
+												))}
+											</div>
+										)}
+									</td>
+								);
+							})}
+						</tr>
+						{/* Vendeur */}
+						<tr className="border-t border-border">
+							<td className="sticky left-0 z-10 bg-background py-2.5 pr-3 shadow-[2px_0_8px_rgba(0,0,0,0.1)]">
+								<span className="text-xs font-medium text-muted-foreground">Vendeur</span>
+							</td>
+							{listings.map((item) => (
+								<td key={item.id} className="px-3 py-2.5">
+									<span className="text-xs text-muted-foreground">
+										{sellerLabels[item.listing.sellerType] ?? item.listing.sellerType}
+									</span>
+								</td>
+							))}
+						</tr>
+						{/* Localisation */}
+						<tr className="border-t border-border">
+							<td className="sticky left-0 z-10 bg-background py-2.5 pr-3 shadow-[2px_0_8px_rgba(0,0,0,0.1)]">
+								<span className="text-xs font-medium text-muted-foreground">Localisation</span>
+							</td>
+							{listings.map((item) => (
+								<td key={item.id} className="px-3 py-2.5">
+									<span className="text-xs text-muted-foreground">{item.listing.location}</span>
+								</td>
+							))}
+						</tr>
+					</tbody>
+				</table>
 			</div>
 		</div>
 	);
