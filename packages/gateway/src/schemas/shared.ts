@@ -29,6 +29,7 @@ export const searchResponseSchema = z.object({
 	minScore: z.number().int(),
 	allowBundles: z.boolean(),
 	analyzeImages: z.boolean(),
+	customInstructions: z.string().nullable(),
 	lastScrapedAt: z.string().nullable(),
 	lastError: z.string().nullable(),
 	blockedUntil: z.string().nullable(),
