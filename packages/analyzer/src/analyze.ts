@@ -191,6 +191,7 @@ const analyzeSingle = async (
 	userProvider: string,
 	marketResult: MarketResearchResult | null,
 	allowBundles: boolean,
+	customInstructions: string | undefined,
 ): Promise<void> => {
 	const seller = extractSellerInfo(listing);
 	const prompt = buildAnalysisPrompt({
@@ -207,6 +208,7 @@ const analyzeSingle = async (
 		},
 		marketContext: marketResult?.context ?? null,
 		allowBundles,
+		customInstructions,
 	});
 
 	const { data } = await generateStructured({
@@ -251,6 +253,7 @@ const analyzeBatch = async (
 	userProvider: string,
 	marketResult: MarketResearchResult | null,
 	allowBundles: boolean,
+	customInstructions: string | undefined,
 ): Promise<void> => {
 	// Build batch prompt with numbered items
 	const items = listingRows.map((listing, i) => ({
@@ -272,6 +275,7 @@ const analyzeBatch = async (
 		items,
 		marketContext: marketResult?.context ?? null,
 		allowBundles,
+		customInstructions,
 	});
 
 	// Scale maxOutputTokens with batch size (~400 tokens per item)
@@ -315,6 +319,7 @@ const analyzeBatch = async (
 					userProvider,
 					marketResult,
 					allowBundles,
+					customInstructions,
 				);
 			} catch (singleErr) {
 				if (singleErr instanceof AiAuthError || singleErr instanceof AiQuotaError) throw singleErr;
@@ -382,6 +387,7 @@ const analyzeBatch = async (
 					userProvider,
 					marketResult,
 					allowBundles,
+					customInstructions,
 				);
 			} catch (err) {
 				if (err instanceof AiAuthError || err instanceof AiQuotaError) throw err;
@@ -436,6 +442,7 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 					aiApiKeyVersion: users.aiApiKeyVersion,
 					aiProvider: users.aiProvider,
 					aiModel: users.aiModel,
+					aiCustomInstructions: users.aiCustomInstructions,
 				})
 				.from(users)
 				.where(eq(users.id, userId));
@@ -469,6 +476,11 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 
 			const userProvider = (user.aiProvider ?? "claude") as ProviderType;
 			const userModel = user.aiModel ?? getDefaultModel(userProvider);
+
+			const instructionParts: string[] = [];
+			if (user.aiCustomInstructions?.trim()) instructionParts.push(user.aiCustomInstructions.trim());
+			if (search.customInstructions?.trim()) instructionParts.push(search.customInstructions.trim());
+			const customInstructions = instructionParts.length > 0 ? instructionParts.join("\n\n") : undefined;
 
 			// Fetch market context once (cached 24h)
 			const marketResult = await fetchMarketContext(deps.redis, deps.db, searchQuery, deps.config.searxngUrl);
@@ -538,6 +550,7 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 							userProvider,
 							marketResult,
 							search.allowBundles,
+							customInstructions,
 						);
 					} else {
 						// Multiple items — batch prompt
@@ -554,6 +567,7 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 							userProvider,
 							marketResult,
 							search.allowBundles,
+							customInstructions,
 						);
 					}
 				} catch (err) {
