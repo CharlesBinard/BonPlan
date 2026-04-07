@@ -15,14 +15,10 @@ import {
 } from "@bonplan/shared";
 import { getDefaultModel, type ProviderType } from "@bonplan/shared/ai-models";
 import { and, eq, gte, inArray, isNull } from "drizzle-orm";
-import pLimit from "p-limit";
 import type Redis from "ioredis";
+import pLimit from "p-limit";
 import { z } from "zod";
-import {
-	analyzeListingImages,
-	IMAGE_ANALYSIS_CONCURRENCY,
-	IMAGE_ANALYSIS_SCORE_THRESHOLD,
-} from "./image-analysis";
+import { analyzeListingImages, IMAGE_ANALYSIS_CONCURRENCY, IMAGE_ANALYSIS_SCORE_THRESHOLD } from "./image-analysis";
 import { computeDiscount, fetchMarketContext, type MarketResearchResult } from "./market-research";
 import { buildAnalysisPrompt, buildBatchAnalysisPrompt } from "./prompts";
 import {
@@ -660,10 +656,7 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 
 									if (!result) return;
 
-									const adjustedScore = Math.max(
-										0,
-										Math.min(100, existing.score + result.scoreAdjustment),
-									);
+									const adjustedScore = Math.max(0, Math.min(100, existing.score + result.scoreAdjustment));
 
 									await deps.db
 										.update(analyses)
@@ -671,9 +664,7 @@ export const startAnalysisConsumer = async (deps: AnalyzeDeps): Promise<{ stop: 
 											score: adjustedScore,
 											imageAnalysis: result,
 										})
-										.where(
-											and(eq(analyses.listingId, listing.id), eq(analyses.searchId, searchId)),
-										);
+										.where(and(eq(analyses.listingId, listing.id), eq(analyses.searchId, searchId)));
 
 									await publish(deps.redis, Stream.ImageAnalysisComplete, {
 										searchId,
