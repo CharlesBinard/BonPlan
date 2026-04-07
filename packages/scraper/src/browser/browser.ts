@@ -98,15 +98,6 @@ export const createPage = async (context: BrowserContext): Promise<Page> => {
 	return page;
 };
 
-/** Lightweight page that blocks images/CSS/fonts — for enrichment only. */
-export const createLightPage = async (context: BrowserContext): Promise<Page> => {
-	const page = await context.newPage();
-	pageCount++;
-	// Block heavy resources via route interception
-	await page.route("**/*.{png,jpg,jpeg,gif,svg,webp,css,woff,woff2,ttf,mp4,webm}", (route) => route.abort());
-	return page;
-};
-
 export const closeConnection = async (): Promise<void> => {
 	if (cachedBrowser) {
 		await cachedBrowser.close().catch(() => {});

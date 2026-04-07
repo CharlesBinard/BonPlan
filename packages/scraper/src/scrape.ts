@@ -5,7 +5,7 @@ import { createLogger, publish, Stream, searches, subscribe } from "@bonplan/sha
 import { eq } from "drizzle-orm";
 import type Redis from "ioredis";
 import type { BrowserContext } from "patchright-core";
-import { createLightPage, createPage, getOrCreateConnection, navigateWithRetry, randomDelay } from "./browser/browser";
+import { createPage, getOrCreateConnection, navigateWithRetry, randomDelay } from "./browser/browser";
 import { dismissCookieConsent } from "./browser/cookie-consent";
 import { insertNewListings, updateLastScraped } from "./db/dedup";
 import {
@@ -189,22 +189,22 @@ const performScrape = async (deps: ScrapeDeps, searchId: string, userId: string)
 	// Uses lightweight pages (no images/CSS) with parallel tabs for speed
 	const needsDescription = dedupedListings.filter((l) => !l.description && l.url);
 	if (needsDescription.length > 0) {
-		const toEnrich = needsDescription.slice(0, 15);
+		const toEnrich = needsDescription.slice(0, 5);
 		logger.info("Enriching descriptions", { searchId, count: toEnrich.length, total: needsDescription.length });
 
-		const CONCURRENCY = 3;
 		let enriched = 0;
 		let blocked = false;
 
-		const enrichOne = async (listing: RawListing): Promise<void> => {
-			if (blocked) return;
-			const page = await createLightPage(conn.context);
+		for (const listing of toEnrich) {
+			if (blocked) break;
+
+			await randomDelay(3000, 6000);
+			const page = await createPage(conn.context);
 			try {
-				const response = await page.goto(listing.url, { waitUntil: "domcontentloaded", timeout: 15000 });
-				const status = response?.status() ?? null;
-				if (status === 403 || status === 429) {
+				const { blocked: navBlocked } = await navigateWithRetry(page, listing.url, 2);
+				if (navBlocked) {
 					blocked = true;
-					return;
+					break;
 				}
 
 				const html = await page.content();
@@ -226,20 +226,6 @@ const performScrape = async (deps: ScrapeDeps, searchId: string, userId: string)
 				});
 			} finally {
 				await page.close();
-			}
-		};
-
-		// Process in batches of CONCURRENCY
-		for (let i = 0; i < toEnrich.length && !blocked; i += CONCURRENCY) {
-			const batch = toEnrich.slice(i, i + CONCURRENCY);
-			const results = await Promise.allSettled(batch.map((listing) => enrichOne(listing)));
-			for (const result of results) {
-				if (result.status === "rejected") {
-					logger.warn("Enrichment failed for listing", { error: String(result.reason) });
-				}
-			}
-			if (!blocked && i + CONCURRENCY < toEnrich.length) {
-				await randomDelay(1000, 2500);
 			}
 		}
 

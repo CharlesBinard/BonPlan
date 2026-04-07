@@ -85,8 +85,8 @@ services:
     depends_on:
       gluetun:
         condition: service_healthy
-    tmpfs:
-      - /data/browser-profile
+    volumes:
+      - browser-profile:/data/browser-profile
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9222/json/version || exit 1"]
       interval: 15s
@@ -251,3 +251,4 @@ volumes:
   redis-data:
   gluetun-data:
   searxng-data:
+  browser-profile:
