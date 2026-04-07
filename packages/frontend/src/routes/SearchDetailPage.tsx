@@ -348,8 +348,9 @@ const SearchDetailPage = () => {
 						<DialogClose render={<Button variant="outline" />}>Annuler</DialogClose>
 						<Button
 							onClick={async () => {
+								if (!search) return;
 								await update.mutateAsync({
-									id: search?.id,
+									id: search.id,
 									data: { notifyWebhook: editWebhookUrl || null },
 								});
 								setWebhookDialogOpen(false);
@@ -393,8 +394,9 @@ const SearchDetailPage = () => {
 						<DialogClose render={<Button variant="outline" />}>Annuler</DialogClose>
 						<Button
 							onClick={async () => {
+								if (!search) return;
 								await update.mutateAsync({
-									id: search?.id,
+									id: search.id,
 									data: { customInstructions: editInstructions.trim() || null },
 								});
 								setInstructionsDialogOpen(false);
