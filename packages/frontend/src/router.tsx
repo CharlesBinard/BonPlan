@@ -7,6 +7,19 @@ import { LoginPage } from "@/routes/AuthLoginPage";
 import { RegisterPage } from "@/routes/AuthRegisterPage";
 import { DashboardPage } from "@/routes/DashboardPage";
 
+/** Wrap lazy imports to auto-reload on stale chunk errors after a redeploy */
+const lazyLoad = (importFn: () => Promise<Record<string, unknown>>) => async () => {
+	try {
+		return await importFn();
+	} catch (err) {
+		if (err instanceof TypeError && err.message.includes("dynamically imported module")) {
+			window.location.reload();
+			return { Component: () => null }; // unreachable, keeps TS happy
+		}
+		throw err;
+	}
+};
+
 const ProtectedRoute = () => {
 	const { isAuthenticated, isLoading, isError } = useAuth();
 	const location = useLocation();
@@ -40,14 +53,14 @@ export const router = createBrowserRouter([
 		children: [
 			{ path: "/", element: <DashboardPage /> },
 			// Lazy-loaded pages: each module exports { Component }
-			{ path: "/searches", lazy: () => import("@/routes/SearchesPage") },
-			{ path: "/searches/:id", lazy: () => import("@/routes/SearchDetailPage") },
-			{ path: "/searches/:id/compare", lazy: () => import("@/routes/ComparePage") },
-			{ path: "/searches/:id/listings/:listingId", lazy: () => import("@/routes/ListingDetailPage") },
-			{ path: "/favorites", lazy: () => import("@/routes/FavoritesPage") },
-			{ path: "/feed", lazy: () => import("@/routes/FeedPage") },
-			{ path: "/notifications", lazy: () => import("@/routes/NotificationsPage") },
-			{ path: "/settings", lazy: () => import("@/routes/SettingsPage") },
+			{ path: "/searches", lazy: lazyLoad(() => import("@/routes/SearchesPage")) },
+			{ path: "/searches/:id", lazy: lazyLoad(() => import("@/routes/SearchDetailPage")) },
+			{ path: "/searches/:id/compare", lazy: lazyLoad(() => import("@/routes/ComparePage")) },
+			{ path: "/searches/:id/listings/:listingId", lazy: lazyLoad(() => import("@/routes/ListingDetailPage")) },
+			{ path: "/favorites", lazy: lazyLoad(() => import("@/routes/FavoritesPage")) },
+			{ path: "/feed", lazy: lazyLoad(() => import("@/routes/FeedPage")) },
+			{ path: "/notifications", lazy: lazyLoad(() => import("@/routes/NotificationsPage")) },
+			{ path: "/settings", lazy: lazyLoad(() => import("@/routes/SettingsPage")) },
 		],
 	},
 	{
