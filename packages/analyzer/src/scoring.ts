@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const comparableSchema = z.object({
 	title: z.string(),
-	price: z.number().min(0).transform(Math.round), // EUR from AI (converted to cents in saveAnalysis)
+	price: z.coerce.number().min(0).transform(Math.round), // EUR from AI (converted to cents in saveAnalysis)
 	source: z.string(),
 	date: z.string().optional(),
 });
@@ -12,12 +12,12 @@ export type AiComparable = z.infer<typeof comparableSchema>;
 export const analysisResultSchema = z.object({
 	reasoning: z.string().min(1),
 	listingType: z.enum(["STANDALONE", "SYSTEM", "BUNDLE", "ACCESSORY", "IRRELEVANT"]).default("STANDALONE"),
-	matchesQuery: z.boolean(),
-	score: z.number().min(0).max(100).transform(Math.round),
+	matchesQuery: z.coerce.boolean(),
+	score: z.coerce.number().min(0).max(100).transform(Math.round),
 	verdict: z.string().min(1),
-	marketPriceLow: z.number().min(0).transform(Math.round).nullable(),
-	marketPriceHigh: z.number().min(0).transform(Math.round).nullable(),
-	redFlags: z.array(z.string()),
+	marketPriceLow: z.coerce.number().min(0).transform(Math.round).nullable().catch(null),
+	marketPriceHigh: z.coerce.number().min(0).transform(Math.round).nullable().catch(null),
+	redFlags: z.array(z.string()).default([]),
 	comparables: z.array(comparableSchema).default([]),
 });
 

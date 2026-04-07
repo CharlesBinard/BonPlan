@@ -284,8 +284,8 @@ searchRoutes.openapi(listListingsRoute, async (c) => {
 
 	if (needsAnalysis) {
 		const conditions = [baseCondition];
-		if (minScore !== undefined) {
-			conditions.push(sql`(${analyses.score} IS NULL OR ${analyses.score} >= ${minScore})`);
+		if (minScore !== undefined && minScore > 0) {
+			conditions.push(sql`${analyses.score} >= ${minScore}`);
 		}
 		if (cursorCondition) {
 			conditions.push(cursorCondition);
