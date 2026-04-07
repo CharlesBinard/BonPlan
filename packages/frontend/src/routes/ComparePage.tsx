@@ -54,20 +54,20 @@ const ComparePage = () => {
 	const allLoaded = queries.every((q) => !q.isLoading);
 	const allErrored = queries.every((q) => q.isError);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: intentionally only re-run when loading state changes
+	const errorCount = allLoaded ? queries.filter((q) => q.isError).length : 0;
+	const hasPartialError = errorCount > 0 && !allErrored;
+	const validIdCount = hasPartialError ? ids.filter((_, i) => !queries[i]?.isError).length : ids.length;
+
 	useEffect(() => {
-		if (!allLoaded) return;
-		const errorCount = queries.filter((q) => q.isError).length;
-		if (errorCount > 0 && !allErrored) {
-			toast.error(`${errorCount} annonce(s) introuvable(s)`);
-			const validIds = ids.filter((_, i) => !queries[i]?.isError);
-			if (validIds.length < 2) {
-				navigate(routes.searchDetail(searchId), { replace: true });
-			} else if (validIds.length < ids.length) {
-				setSearchParams({ ids: validIds.join(",") }, { replace: true });
-			}
+		if (!allLoaded || !hasPartialError) return;
+		toast.error(`${errorCount} annonce(s) introuvable(s)`);
+		const validIds = ids.filter((_, i) => !queries[i]?.isError);
+		if (validIdCount < 2) {
+			navigate(routes.searchDetail(searchId), { replace: true });
+		} else {
+			setSearchParams({ ids: validIds.join(",") }, { replace: true });
 		}
-	}, [allLoaded]);
+	}, [allLoaded, hasPartialError, errorCount, validIdCount, ids, queries, navigate, searchId, setSearchParams]);
 
 	const handleRemove = (listingId: string) => {
 		const next = ids.filter((i) => i !== listingId);
@@ -110,9 +110,8 @@ const ComparePage = () => {
 				<Skeleton className="h-8 w-48" />
 				<Skeleton className="h-6 w-64" />
 				<div className="grid gap-4" style={{ gridTemplateColumns: `8rem repeat(${ids.length}, 1fr)` }}>
-					{Array.from({ length: (ids.length + 1) * 8 }).map((_, i) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton placeholder
-						<Skeleton key={`sk-${i}`} className="h-10 w-full" />
+					{Array.from({ length: (ids.length + 1) * 8 }, (_, i) => `sk-${i}`).map((key) => (
+						<Skeleton key={key} className="h-10 w-full" />
 					))}
 				</div>
 			</div>
