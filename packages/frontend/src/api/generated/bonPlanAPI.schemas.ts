@@ -110,6 +110,7 @@ export type GetApiSearches200SearchesItem = {
   minScore: number;
   allowBundles: boolean;
   analyzeImages: boolean;
+  customInstructions: string | null;
   lastScrapedAt: string | null;
   lastError: string | null;
   blockedUntil: string | null;
@@ -159,6 +160,8 @@ export type PostApiSearchesBody = {
   minScore?: number;
   allowBundles?: boolean;
   analyzeImages?: boolean;
+  /** @maxLength 500 */
+  customInstructions?: string | null;
 };
 
 export type PostApiSearches201SearchStatus = typeof PostApiSearches201SearchStatus[keyof typeof PostApiSearches201SearchStatus];
@@ -202,6 +205,7 @@ export type PostApiSearches201Search = {
   minScore: number;
   allowBundles: boolean;
   analyzeImages: boolean;
+  customInstructions: string | null;
   lastScrapedAt: string | null;
   lastError: string | null;
   blockedUntil: string | null;
@@ -266,6 +270,7 @@ export type GetApiSearchesId200Search = {
   minScore: number;
   allowBundles: boolean;
   analyzeImages: boolean;
+  customInstructions: string | null;
   lastScrapedAt: string | null;
   lastError: string | null;
   blockedUntil: string | null;
@@ -308,6 +313,8 @@ export type PatchApiSearchesIdBody = {
      */
   minScore?: number;
   status?: PatchApiSearchesIdBodyStatus;
+  /** @maxLength 500 */
+  customInstructions?: string | null;
 };
 
 export type PatchApiSearchesId200SearchStatus = typeof PatchApiSearchesId200SearchStatus[keyof typeof PatchApiSearchesId200SearchStatus];
@@ -351,6 +358,7 @@ export type PatchApiSearchesId200Search = {
   minScore: number;
   allowBundles: boolean;
   analyzeImages: boolean;
+  customInstructions: string | null;
   lastScrapedAt: string | null;
   lastError: string | null;
   blockedUntil: string | null;
@@ -774,6 +782,7 @@ export type GetApiSettings200 = {
   aiModel: string | null;
   defaultWebhookUrl: string | null;
   defaultMinScore: number | null;
+  aiCustomInstructions: string | null;
 };
 
 export type GetApiSettings404 = {
@@ -806,6 +815,8 @@ export type PatchApiSettingsBody = {
      * @maximum 100
      */
   defaultMinScore?: number | null;
+  /** @maxLength 500 */
+  aiCustomInstructions?: string | null;
 };
 
 export type PatchApiSettings200 = {

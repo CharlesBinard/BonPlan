@@ -33,6 +33,7 @@ export const searchCreateSchema = z.object({
 	allowBundles: z.boolean().default(false),
 	analyzeImages: z.boolean().default(false),
 	notifyWebhook: z.string().url().refine((url) => url.startsWith("https://"), "L'URL doit utiliser HTTPS").optional().nullable(),
+	customInstructions: z.string().max(500, "Maximum 500 caractères").optional().nullable(),
 });
 
 export const searchUpdateSchema = z.object({
@@ -40,6 +41,7 @@ export const searchUpdateSchema = z.object({
 	minScore: z.number().int().min(0).max(100).optional(),
 	status: z.enum(["active", "paused"]).optional(),
 	notifyWebhook: z.string().url().optional().nullable(),
+	customInstructions: z.string().max(500, "Maximum 500 caractères").optional().nullable(),
 });
 
 export const apiKeySchema = z.object({
