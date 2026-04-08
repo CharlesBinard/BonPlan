@@ -3,7 +3,7 @@ import { createLogger, runMigrations } from "@bonplan/shared";
 import { serveStatic } from "hono/bun";
 import { app } from "./app";
 import { db, pgClient, redis } from "./lib/db";
-import { cleanupWebSocket, setupWebSocket } from "./lib/ws";
+import { cleanupWebSocket, setupWebSocketRoute, startWebSocketSubscribers } from "./lib/ws";
 
 const logger = createLogger("gateway");
 
@@ -12,8 +12,8 @@ const logger = createLogger("gateway");
 await runMigrations(db, resolve(import.meta.dir, "../../shared/drizzle"));
 logger.info("Database migrations applied");
 
-// ── WebSocket
-const websocket = await setupWebSocket(app);
+// ── WebSocket (register route synchronously, start subscribers in background)
+const websocket = setupWebSocketRoute(app);
 
 // ── Static frontend (must be after all API routes)
 const frontendDist = resolve(import.meta.dir, "../../frontend/dist");
@@ -34,6 +34,11 @@ const server = Bun.serve({
 });
 
 logger.info("Gateway started", { port: server.port });
+
+// Start WS subscribers in background (non-blocking)
+startWebSocketSubscribers()
+	.then(() => logger.info("WS subscribers started"))
+	.catch((err) => logger.error("Failed to start WS subscribers", { error: err instanceof Error ? err.message : String(err) }));
 
 // ── Graceful shutdown
 const shutdown = async () => {

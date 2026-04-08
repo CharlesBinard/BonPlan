@@ -40,7 +40,7 @@ export const cleanupWebSocket = async (): Promise<void> => {
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: accept both Hono and OpenAPIHono
-export const setupWebSocket = async (app: Hono<any>): Promise<typeof websocket> => {
+export const setupWebSocketRoute = (app: Hono<any>): typeof websocket => {
 	app.get(
 		"/ws",
 		upgradeWebSocket(async (c) => {
@@ -79,7 +79,11 @@ export const setupWebSocket = async (app: Hono<any>): Promise<typeof websocket> 
 		}),
 	);
 
-	// Subscribe to streams — type-safe per-stream handlers
+	return websocket;
+};
+
+export const startWebSocketSubscribers = async (): Promise<void> => {
+	// Subscribe to streams — dedicated Redis connection for blocking XREADGROUP
 	wsRedis = createRedis(config.redisUrl);
 
 	subs.push(
@@ -187,6 +191,4 @@ export const setupWebSocket = async (app: Hono<any>): Promise<typeof websocket> 
 			{ logger, serviceName: "gateway-ws" },
 		),
 	);
-
-	return websocket;
 };
