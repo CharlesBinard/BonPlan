@@ -122,19 +122,6 @@ services:
           memory: 512m
           cpus: "0.5"
 
-  # ── Cloudflare Tunnel ──
-  cloudflared:
-    image: cloudflare/cloudflared:2024.12.2
-    command: tunnel run
-    environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?}
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 128m
-          cpus: "0.25"
-
   # ── Application services ──
   gateway:
     build:
