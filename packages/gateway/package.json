@@ -10,10 +10,10 @@
 		"typecheck": "bun run tsc --noEmit"
 	},
 	"dependencies": {
-		"@asteasolutions/zod-to-openapi": "^8.5.0",
+		"@asteasolutions/zod-to-openapi": "^9.0.0",
 		"@bonplan/shared": "workspace:*",
 		"@hono/zod-openapi": "^1.2.4",
-		"@scalar/hono-api-reference": "^0.10.5",
+		"@scalar/hono-api-reference": "^0.11.9",
 		"better-auth": "^1.5.6",
 		"drizzle-orm": "^0.45.2",
 		"hono": "^4.12.9",
@@ -22,7 +22,7 @@
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {
-		"typescript": "^6.0.2",
+		"typescript": "^7.0.2",
 		"@types/bun": "^1.3.11"
 	}
 }
